@@ -141,8 +141,8 @@ $app = require_once __DIR__.'/../inscripcionesu_core/bootstrap/app.php';
 3. Elimina archivos por defecto de InfinityFree que puedan interferir (por ejemplo `index2.html`).
 4. Confirma que `vendor/` exista en `inscripcionesu_core/`.
 5. En `.env` usa:
-     - `APP_ENV=production`
-     - `APP_DEBUG=false`
-     - `APP_URL=https://tu-dominio`
+    - `APP_ENV=production`
+    - `APP_DEBUG=false`
+    - `APP_URL=https://tu-dominio`
 
 Si luego de esto aparece error 500, ya no es problema de 403/estructura: normalmente sera ruta en `index.php`, datos de `.env` o permisos.

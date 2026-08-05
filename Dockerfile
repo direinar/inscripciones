@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
 
+# ==========================
+# Etapa 1: Dependencias PHP
+# ==========================
 FROM composer:2 AS vendor
 
 WORKDIR /app
@@ -14,11 +17,15 @@ RUN composer install \
     --no-scripts \
     --optimize-autoloader
 
+# ==========================
+# Etapa 2: Compilar Assets
+# ==========================
 FROM node:20-alpine AS assets
 
 WORKDIR /app
 
 COPY package*.json ./
+
 RUN npm ci
 
 COPY resources ./resources
@@ -27,6 +34,9 @@ COPY vite.config.js ./
 
 RUN npm run build
 
+# ==========================
+# Etapa 3: Aplicación
+# ==========================
 FROM php:8.4-apache
 
 WORKDIR /var/www/html
@@ -55,6 +65,11 @@ COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=assets /app/public/build ./public/build
 
+# Copiar script de inicio
+COPY docker/start.sh /usr/local/bin/start.sh
+
+RUN chmod +x /usr/local/bin/start.sh
+
 RUN mkdir -p \
     storage/framework/cache \
     storage/framework/sessions \
@@ -66,4 +81,4 @@ RUN mkdir -p \
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/start.sh"]

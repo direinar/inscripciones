@@ -107,7 +107,8 @@
                         <th>Programa</th>
                         <th class="hide-sm">Documento</th>
                         <th class="hide-md">Contacto</th>
-                        <th class="hide-lg">Residencia</th>
+                        <th class="hide-lg">Departamento</th>
+                        <th class="hide-lg">Municipio</th>
                         <th>Estado</th>
                         <th>Pago inscripción</th>
                         <th>Pago matrícula</th>
@@ -128,9 +129,12 @@
                             </td>
                             <td class="hide-sm">{{ $enrollment->document_type }}<br>{{ $enrollment->document_number }}
                             </td>
-                            <td class="hide-md">{{ $enrollment->phone }}<br>{{ $enrollment->mobile }}</td>
+                            <td class="hide-md">{{ $enrollment->mobile }}</td>
                             <td class="hide-lg">
-                                {{ $enrollment->residence_city }}<br>{{ $enrollment->neighborhood ?: 'Sin barrio' }}</td>
+                                {{ optional($enrollment->residenceDepartment)->name ?: 'Sin departamento' }}</td>
+                            <td class="hide-lg">
+                                {{ optional($enrollment->residenceMunicipality)->name ?: ($enrollment->residence_city ?: 'Sin municipio') }}
+                            </td>
                             <td>
                                 <span class="pill"
                                     style="background: {{ $enrollment->student_status === 'activo' ? '#dcfce7' : '#fee2e2' }}; color: {{ $enrollment->student_status === 'activo' ? '#166534' : '#991b1b' }};">
@@ -176,7 +180,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="muted" style="padding: 1rem;">No hay registros para los filtros
+                            <td colspan="10" class="muted" style="padding: 1rem;">No hay registros para los filtros
                                 seleccionados.</td>
                         </tr>
                     @endforelse

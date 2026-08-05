@@ -2,11 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CampusScheduleOption;
+use App\Models\Department;
 use App\Models\Enrollment;
+use App\Models\Municipality;
+use App\Models\PeriodOption;
+use App\Models\ProgramOption;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -20,9 +27,24 @@ class EnrollmentController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'period' => ['required', 'string', 'max:100'],
-            'campus_schedule' => ['required', 'string', 'max:150'],
-            'program' => ['required', 'string', 'max:150'],
+            'period' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::exists('period_options', 'name')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'campus_schedule' => [
+                'required',
+                'string',
+                'max:150',
+                Rule::exists('campus_schedule_options', 'name')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'program' => [
+                'required',
+                'string',
+                'max:150',
+                Rule::exists('program_options', 'name')->where(fn ($query) => $query->where('is_active', true)),
+            ],
             'first_name' => ['required', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -31,13 +53,34 @@ class EnrollmentController extends Controller
             'document_number' => ['required', 'string', 'max:50'],
             'sex' => ['required', 'string', 'max:30'],
             'email' => ['required', 'email', 'max:150'],
-            'phone' => ['required', 'string', 'max:30'],
             'mobile' => ['required', 'string', 'max:30'],
             'birth_date' => ['required', 'date', 'before:today'],
             'address' => ['required', 'string', 'max:255'],
-            'residence_city' => ['required', 'string', 'max:100'],
-            'neighborhood' => ['nullable', 'string', 'max:100'],
+            'residence_department_id' => [
+                'required',
+                'integer',
+                Rule::exists('departments', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'residence_municipality_id' => [
+                'required',
+                'integer',
+                Rule::exists('municipalities', 'id')->where(function ($query) use ($request) {
+                    $query
+                        ->where('department_id', (int) $request->input('residence_department_id'))
+                        ->where('is_active', true);
+                }),
+            ],
         ]);
+
+        $selectedMunicipality = Municipality::query()
+            ->whereKey((int) $data['residence_municipality_id'])
+            ->where('department_id', (int) $data['residence_department_id'])
+            ->firstOrFail();
+
+        // Keep compatibility with current non-null database columns removed from public form.
+        $data['phone'] = '';
+        $data['residence_city'] = $selectedMunicipality->name;
+        $data['neighborhood'] = null;
 
         $data['paid_inscription'] = false;
         $data['paid_tuition'] = false;
@@ -48,9 +91,32 @@ class EnrollmentController extends Controller
         return redirect()->route('enrollments.create')->with('success', 'Tu inscripción fue enviada correctamente.');
     }
 
+    public function municipalitiesByDepartment(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'department_id' => [
+                'required',
+                'integer',
+                Rule::exists('departments', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+        ]);
+
+        $municipalities = Municipality::query()
+            ->where('department_id', (int) $validated['department_id'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'municipalities' => $municipalities,
+        ]);
+    }
+
     public function index(Request $request)
     {
-        $enrollments = $this->filteredQuery($request)->get();
+        $enrollments = $this->filteredQuery($request)
+            ->with(['residenceDepartment:id,name', 'residenceMunicipality:id,name'])
+            ->get();
 
         return view('enrollments.index', [
             'enrollments' => $enrollments,
@@ -128,8 +194,8 @@ class EnrollmentController extends Controller
                 'Celular',
                 'Fecha nacimiento',
                 'Direccion',
+                'Departamento residencia',
                 'Municipio',
-                'Barrio',
                 'Pago inscripcion',
                 'Pago matricula',
                 'Estado',
@@ -157,8 +223,8 @@ class EnrollmentController extends Controller
                     $enrollment->mobile,
                     optional($enrollment->birth_date)->format('Y-m-d'),
                     $enrollment->address,
-                    $enrollment->residence_city,
-                    $enrollment->neighborhood,
+                    optional($enrollment->residenceDepartment)->name,
+                    optional($enrollment->residenceMunicipality)->name ?: $enrollment->residence_city,
                     $enrollment->paid_inscription ? 'Pagado' : 'Pendiente',
                     $enrollment->paid_tuition ? 'Pagado' : 'Pendiente',
                     $enrollment->student_status,
@@ -187,17 +253,21 @@ class EnrollmentController extends Controller
             'REPORTE DE INSCRIPCIONES',
             'Fecha de generacion: ' . $timestamp,
             str_repeat('-', 120),
-            'Fecha | Nombre | Documento | Programa | Pago Inscripcion | Pago Matricula | Estado',
+            'Fecha | Nombre | Documento | Programa | Depto | Municipio | Pago Inscripcion | Pago Matricula | Estado',
             str_repeat('-', 120),
         ];
 
         foreach ($rows as $enrollment) {
             $name = trim($enrollment->first_name . ' ' . $enrollment->middle_name . ' ' . $enrollment->last_name . ' ' . $enrollment->second_last_name);
+            $department = optional($enrollment->residenceDepartment)->name ?? '';
+            $municipality = optional($enrollment->residenceMunicipality)->name ?: (string) $enrollment->residence_city;
             $line = implode(' | ', [
                 $enrollment->created_at->format('Y-m-d'),
                 $this->truncateText($name, 28),
                 $enrollment->document_number,
                 $this->truncateText($enrollment->program, 24),
+                $this->truncateText($department, 16),
+                $this->truncateText($municipality, 18),
                 $enrollment->paid_inscription ? 'Pagado' : 'Pendiente',
                 $enrollment->paid_tuition ? 'Pagado' : 'Pendiente',
                 strtoupper((string) $enrollment->student_status),
@@ -221,7 +291,9 @@ class EnrollmentController extends Controller
 
     protected function filteredQuery(Request $request): Builder
     {
-        $query = Enrollment::query()->latest();
+        $query = Enrollment::query()
+            ->with(['residenceDepartment:id,name', 'residenceMunicipality:id,name'])
+            ->latest();
 
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
@@ -332,22 +404,28 @@ class EnrollmentController extends Controller
     protected function formOptions(): array
     {
         return [
-            'periods' => [
-                '2026-1',
-                '2026-2',
-                '2027-1',
-            ],
-            'campusSchedules' => [
-                'Principal - Diurna',
-                'Principal - Fin de Semana',
-                'Principal - Única',
-            ],
-            'programs' => [
-                'TL Agente de Tránsito',
-                'TL Auxiliar Administrativo',
-                'TL Auxiliar en Seguridad y Salud en el Trabajo',
-                'TL Sistemas Informáticos',
-            ],
+            'periods' => PeriodOption::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            'campusSchedules' => CampusScheduleOption::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            'programs' => ProgramOption::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            'departments' => Department::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'documentTypes' => [
                 'Cédula de Ciudadanía',
                 'Tarjeta de Identidad',
@@ -358,21 +436,6 @@ class EnrollmentController extends Controller
                 'Femenino',
                 'Masculino',
                 'Otro',
-            ],
-            'cities' => [
-                'Barranquilla',
-                'Soledad',
-                'Malambo',
-                'Galapa',
-                'Puerto Colombia',
-            ],
-            'neighborhoods' => [
-                'Centro',
-                'Las Moras',
-                'Villa Estadio',
-                'Ciudadela 20 de Julio',
-                'Los Robles',
-                'El Parque',
             ],
         ];
     }

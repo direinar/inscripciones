@@ -71,6 +71,28 @@
             margin-bottom: 0.5rem;
         }
 
+        .brand-logo {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 auto;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.2rem;
+            object-fit: contain;
+            display: block;
+        }
+
+        .brand-logo--sidebar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .brand-logo--topbar {
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
         .sidebar a {
             color: #dbeafe;
             text-decoration: none;
@@ -141,6 +163,10 @@
             gap: 0.55rem;
             font-weight: 700;
             color: var(--primary-dark);
+        }
+
+        .brand-text {
+            min-width: 0;
         }
 
         .badge {
@@ -500,7 +526,8 @@
         <button id="sidebarBackdrop" class="sidebar-backdrop" type="button" aria-label="Cerrar menú"></button>
         <aside class="sidebar">
             <div class="brand">
-                <span>◉</span>
+                <img class="brand-logo brand-logo--sidebar" src="{{ asset('images/logotipo.jpeg') }}"
+                    alt="Logotipo del sistema" loading="eager" decoding="async">
                 <span>Sistema de gestión</span>
             </div>
 
@@ -513,6 +540,8 @@
             @if (Auth::check() && Auth::user()->isAdmin())
                 <a class="{{ request()->routeIs('users.*') ? 'active' : '' }}"
                     href="{{ route('users.index') }}">Usuarios</a>
+                <a class="{{ request()->routeIs('admin.period-options.*') || request()->routeIs('admin.campus-schedule-options.*') || request()->routeIs('admin.program-options.*') ? 'active' : '' }}"
+                    href="{{ route('admin.period-options.index') }}">Catálogos</a>
                 <a class="{{ request()->routeIs('admin') ? 'active' : '' }}"
                     href="{{ route('admin') }}">Administración</a>
             @endif
@@ -528,8 +557,9 @@
                     <button id="sidebarToggle" class="icon-btn" type="button" aria-label="Mostrar u ocultar menú"
                         aria-expanded="true">☰</button>
                     <div class="brand" style="color: var(--primary-dark);">
-                        <span>◉</span>
-                        <span>@yield('badge', 'Panel')</span>
+                        <img class="brand-logo brand-logo--topbar" src="{{ asset('images/logotipo.jpeg') }}"
+                            alt="Logotipo del sistema" loading="eager" decoding="async">
+                        <span class="brand-text">@yield('badge', 'Panel')</span>
                     </div>
                 </div>
                 <div class="badge">{{ Auth::check() ? Auth::user()->role : 'Invitado' }}</div>

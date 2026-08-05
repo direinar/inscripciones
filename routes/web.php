@@ -1,12 +1,17 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\CampusScheduleOptionController;
+use App\Http\Controllers\Admin\PeriodOptionController;
+use App\Http\Controllers\Admin\ProgramOptionController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [EnrollmentController::class, 'create'])->name('enrollments.create');
+Route::get('/municipios-por-departamento', [EnrollmentController::class, 'municipalitiesByDepartment'])
+    ->name('enrollments.municipalities.by-department');
 Route::post('/inscripciones', [EnrollmentController::class, 'store'])->name('enrollments.store');
 
 Route::middleware('guest')->group(function () {
@@ -34,5 +39,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        Route::resource('/admin/period-options', PeriodOptionController::class)
+            ->parameters(['period-options' => 'periodOption'])
+            ->except('show')
+            ->names('admin.period-options');
+
+        Route::resource('/admin/campus-schedule-options', CampusScheduleOptionController::class)
+            ->parameters(['campus-schedule-options' => 'campusScheduleOption'])
+            ->except('show')
+            ->names('admin.campus-schedule-options');
+
+        Route::resource('/admin/program-options', ProgramOptionController::class)
+            ->parameters(['program-options' => 'programOption'])
+            ->except('show')
+            ->names('admin.program-options');
     });
 });

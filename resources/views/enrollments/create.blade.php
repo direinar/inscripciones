@@ -49,6 +49,37 @@
             flex-wrap: wrap;
         }
 
+        .brand-panel {
+            display: flex;
+            align-items: center;
+            gap: 0.95rem;
+            max-width: 760px;
+        }
+
+        .brand-mark {
+            flex: 0 0 auto;
+            width: clamp(72px, 10vw, 118px);
+            aspect-ratio: 1 / 1;
+            padding: 0.65rem;
+            border-radius: 22px;
+            background: white;
+            border: 1px solid rgba(219, 228, 240, 0.95);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+            display: grid;
+            place-items: center;
+        }
+
+        .brand-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .brand-copy {
+            min-width: 0;
+        }
+
         .eyebrow {
             display: inline-block;
             padding: 0.35rem 0.7rem;
@@ -214,6 +245,10 @@
                 align-items: flex-start;
             }
 
+            .brand-panel {
+                max-width: none;
+            }
+
             .hero-actions {
                 align-self: flex-start;
             }
@@ -246,6 +281,16 @@
                 margin-bottom: 1rem;
             }
 
+            .brand-panel {
+                align-items: flex-start;
+            }
+
+            .brand-mark {
+                width: 84px;
+                padding: 0.55rem;
+                border-radius: 18px;
+            }
+
             .subtitle {
                 font-size: 0.95rem;
                 line-height: 1.55;
@@ -257,11 +302,16 @@
 <body>
     <div class="shell">
         <div class="hero">
-            <div>
-                <span class="eyebrow">Inscripción pública</span>
-                <h1>Registra tu solicitud de inscripción</h1>
-                <p class="subtitle">Completa el formulario con la información del programa y tus datos personales. El
-                    equipo administrativo y de mercadeo podrá hacer seguimiento interno a tu registro.</p>
+            <div class="brand-panel">
+                <div class="brand-mark" aria-hidden="true">
+                    <img src="{{ asset('images/logotipo.jpeg') }}" alt="" loading="eager" decoding="async">
+                </div>
+                <div class="brand-copy">
+                    <span class="eyebrow">Inscripción pública</span>
+                    <h1>Registra tu solicitud de inscripción</h1>
+                    <p class="subtitle">Completa el formulario con la información del programa y tus datos personales.
+                        El equipo administrativo y de mercadeo podrá hacer seguimiento interno a tu registro.</p>
+                </div>
             </div>
             <div class="hero-actions">
                 <a class="btn btn-ghost" href="{{ route('login') }}">Acceso interno</a>
@@ -394,16 +444,9 @@
                         </div>
                         <div class="field">
                             <label for="email">Correo electrónico *</label>
-                            <input id="email" name="email" type="email" value="{{ old('email') }}" required>
-                            @error('email')
-                                <div class="error">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="field">
-                            <label for="phone">Teléfono *</label>
-                            <input id="phone" name="phone" type="text" value="{{ old('phone') }}"
+                            <input id="email" name="email" type="email" value="{{ old('email') }}"
                                 required>
-                            @error('phone')
+                            @error('email')
                                 <div class="error">{{ $message }}</div>
                             @enderror
                         </div>
@@ -432,30 +475,26 @@
                             @enderror
                         </div>
                         <div class="field">
-                            <label for="residence_city">Lugar de residencia *</label>
-                            <select id="residence_city" name="residence_city" required>
-                                <option value="">Seleccione municipio</option>
-                                @foreach ($cities as $city)
-                                    <option value="{{ $city }}"
-                                        {{ old('residence_city') === $city ? 'selected' : '' }}>{{ $city }}
-                                    </option>
+                            <label for="residence_department_id">Departamento de residencia *</label>
+                            <select id="residence_department_id" name="residence_department_id" required>
+                                <option value="">Seleccione departamento</option>
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}"
+                                        {{ (string) old('residence_department_id') === (string) $department->id ? 'selected' : '' }}>
+                                        {{ $department->name }}</option>
                                 @endforeach
                             </select>
-                            @error('residence_city')
+                            @error('residence_department_id')
                                 <div class="error">{{ $message }}</div>
                             @enderror
                         </div>
                         <div class="field">
-                            <label for="neighborhood">Barrio</label>
-                            <select id="neighborhood" name="neighborhood">
-                                <option value="">Seleccione barrio</option>
-                                @foreach ($neighborhoods as $neighborhood)
-                                    <option value="{{ $neighborhood }}"
-                                        {{ old('neighborhood') === $neighborhood ? 'selected' : '' }}>
-                                        {{ $neighborhood }}</option>
-                                @endforeach
+                            <label for="residence_municipality_id">Municipio de residencia *</label>
+                            <select id="residence_municipality_id" name="residence_municipality_id" required
+                                data-old-value="{{ old('residence_municipality_id') }}" disabled>
+                                <option value="">Seleccione municipio</option>
                             </select>
-                            @error('neighborhood')
+                            @error('residence_municipality_id')
                                 <div class="error">{{ $message }}</div>
                             @enderror
                         </div>
@@ -469,6 +508,74 @@
             </form>
         </div>
     </div>
+
+    <script>
+        (function() {
+            var departmentSelect = document.getElementById('residence_department_id');
+            var municipalitySelect = document.getElementById('residence_municipality_id');
+            if (!departmentSelect || !municipalitySelect) return;
+
+            var endpoint = @json(route('enrollments.municipalities.by-department'));
+            var selectedMunicipality = municipalitySelect.getAttribute('data-old-value') || '';
+
+            function resetMunicipalities(placeholder) {
+                municipalitySelect.innerHTML = '';
+                var option = document.createElement('option');
+                option.value = '';
+                option.textContent = placeholder;
+                municipalitySelect.appendChild(option);
+                municipalitySelect.disabled = true;
+            }
+
+            async function loadMunicipalities(departmentId) {
+                resetMunicipalities('Cargando municipios...');
+
+                try {
+                    var response = await fetch(endpoint + '?department_id=' + encodeURIComponent(departmentId), {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('No se pudieron cargar los municipios.');
+                    }
+
+                    var data = await response.json();
+                    var municipalities = Array.isArray(data.municipalities) ? data.municipalities : [];
+
+                    resetMunicipalities('Seleccione municipio');
+                    municipalitySelect.disabled = municipalities.length === 0;
+
+                    municipalities.forEach(function(item) {
+                        var option = document.createElement('option');
+                        option.value = String(item.id);
+                        option.textContent = item.name;
+                        if (selectedMunicipality && String(item.id) === String(selectedMunicipality)) {
+                            option.selected = true;
+                        }
+                        municipalitySelect.appendChild(option);
+                    });
+                } catch (error) {
+                    resetMunicipalities('No se pudieron cargar municipios');
+                }
+            }
+
+            departmentSelect.addEventListener('change', function() {
+                selectedMunicipality = '';
+                if (!departmentSelect.value) {
+                    resetMunicipalities('Seleccione municipio');
+                    return;
+                }
+
+                loadMunicipalities(departmentSelect.value);
+            });
+
+            if (departmentSelect.value) {
+                loadMunicipalities(departmentSelect.value);
+            }
+        })();
+    </script>
 </body>
 
 </html>

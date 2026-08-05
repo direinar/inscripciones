@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'period',
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Model;
     'mobile',
     'birth_date',
     'address',
+    'residence_department_id',
+    'residence_municipality_id',
     'residence_city',
     'neighborhood',
     'paid_inscription',
@@ -35,7 +38,19 @@ class Enrollment extends Model
             'birth_date' => 'date',
             'paid_inscription' => 'boolean',
             'paid_tuition' => 'boolean',
+            'residence_department_id' => 'integer',
+            'residence_municipality_id' => 'integer',
         ];
+    }
+
+    public function residenceDepartment(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'residence_department_id');
+    }
+
+    public function residenceMunicipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class, 'residence_municipality_id');
     }
 
     public function syncStudentStatus(): void

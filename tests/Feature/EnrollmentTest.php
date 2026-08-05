@@ -2,7 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\CampusScheduleOption;
+use App\Models\Department;
 use App\Models\Enrollment;
+use App\Models\Municipality;
+use App\Models\PeriodOption;
+use App\Models\ProgramOption;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,8 +16,47 @@ class EnrollmentTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function seedCatalogsAndLocation(): array
+    {
+        PeriodOption::create([
+            'name' => '2026-1',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        CampusScheduleOption::create([
+            'name' => 'Principal - Fin de Semana',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        ProgramOption::create([
+            'name' => 'TL Agente de Tránsito',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $department = Department::create([
+            'name' => 'Antioquia',
+            'is_active' => true,
+        ]);
+
+        $municipality = Municipality::create([
+            'department_id' => $department->id,
+            'name' => 'Medellín',
+            'is_active' => true,
+        ]);
+
+        return [
+            'department_id' => $department->id,
+            'municipality_id' => $municipality->id,
+        ];
+    }
+
     private function enrollmentPayload(array $overrides = []): array
     {
+        $location = $this->seedCatalogsAndLocation();
+
         return array_merge([
             'period' => '2026-1',
             'campus_schedule' => 'Principal - Fin de Semana',
@@ -29,7 +73,9 @@ class EnrollmentTest extends TestCase
             'mobile' => '3001234567',
             'birth_date' => '2000-05-10',
             'address' => 'Calle 10 # 20-30',
-            'residence_city' => 'Soledad',
+            'residence_department_id' => $location['department_id'],
+            'residence_municipality_id' => $location['municipality_id'],
+            'residence_city' => 'Medellín',
             'neighborhood' => 'Los Robles',
         ], $overrides);
     }

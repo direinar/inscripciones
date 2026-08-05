@@ -16,6 +16,7 @@
                 <a class="btn btn-sm btn-sm-nav" href="{{ route('enrollments.index') }}">Inscripciones</a>
                 @if (Auth::user()->isAdmin())
                     <a class="btn btn-sm btn-sm-nav" href="{{ route('users.index') }}">Usuarios</a>
+                    <a class="btn btn-sm btn-sm-nav" href="{{ route('admin.period-options.index') }}">Catálogos</a>
                     <a class="btn btn-sm btn-ghost btn-sm-nav" href="{{ route('admin') }}">Panel admin</a>
                 @endif
                 <form method="POST" action="{{ route('logout') }}" style="margin: 0;">

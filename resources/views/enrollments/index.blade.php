@@ -61,16 +61,27 @@
             </div>
             <div class="field-grid">
                 <div class="field">
-                    <label for="campus_schedule">Sede - jornada</label>
-                    <select id="campus_schedule" name="campus_schedule">
+                    <label for="campus">Sede</label>
+                    <select id="campus" name="campus">
                         <option value="">Todas</option>
-                        @foreach ($campusSchedules as $campusSchedule)
-                            <option value="{{ $campusSchedule }}"
-                                {{ request('campus_schedule') === $campusSchedule ? 'selected' : '' }}>
-                                {{ $campusSchedule }}</option>
+                        @foreach ($campuses as $campus)
+                            <option value="{{ $campus }}" {{ request('campus') === $campus ? 'selected' : '' }}>
+                                {{ $campus }}</option>
                         @endforeach
                     </select>
                 </div>
+                <div class="field">
+                    <label for="jornada">Jornada</label>
+                    <select id="jornada" name="jornada">
+                        <option value="">Todas</option>
+                        @foreach ($jornadas as $jornada)
+                            <option value="{{ $jornada }}" {{ request('jornada') === $jornada ? 'selected' : '' }}>
+                                {{ $jornada }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="field-grid">
                 <div class="field">
                     <label for="program">Programa</label>
                     <select id="program" name="program">
@@ -81,8 +92,6 @@
                         @endforeach
                     </select>
                 </div>
-            </div>
-            <div class="field-grid">
                 <div class="field">
                     <label for="from_date">Fecha desde</label>
                     <input id="from_date" name="from_date" type="date" value="{{ request('from_date') }}">
@@ -125,7 +134,10 @@
                             <td>
                                 <div>{{ $enrollment->program }}</div>
                                 <div class="muted" style="margin-top: 0.2rem;">{{ $enrollment->period }} ·
-                                    {{ $enrollment->campus_schedule }}</div>
+                                    {{ $enrollment->campus ?: trim(explode(' - ', (string) $enrollment->campus_schedule, 2)[0] ?? '') }}
+                                    ·
+                                    {{ $enrollment->jornada ?: trim(explode(' - ', (string) $enrollment->campus_schedule, 2)[1] ?? '') }}
+                                </div>
                             </td>
                             <td class="hide-sm">{{ $enrollment->document_type }}<br>{{ $enrollment->document_number }}
                             </td>

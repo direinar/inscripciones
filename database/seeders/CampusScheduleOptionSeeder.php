@@ -12,7 +12,7 @@ class CampusScheduleOptionSeeder extends Seeder
      */
     public function run(): void
     {
-        $campusSchedules = [
+        $campuses = [
             'Vegachí',
             'Amalfi',
             'Anorí',
@@ -27,10 +27,13 @@ class CampusScheduleOptionSeeder extends Seeder
             'SRoque',
             'Yali',
             'Yolombo',
-            'Virtual',
         ];
 
-        foreach ($campusSchedules as $index => $name) {
+        CampusScheduleOption::query()
+            ->whereNotIn('name', $campuses)
+            ->update(['is_active' => false]);
+
+        foreach ($campuses as $index => $name) {
             CampusScheduleOption::updateOrCreate(
                 ['name' => $name],
                 [

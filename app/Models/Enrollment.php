@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'period',
     'campus_schedule',
+    'campus',
+    'jornada',
     'program',
     'first_name',
     'middle_name',

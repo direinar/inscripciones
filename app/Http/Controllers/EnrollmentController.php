@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CampusScheduleOption;
 use App\Models\Department;
 use App\Models\Enrollment;
+use App\Models\JornadaOption;
 use App\Models\Municipality;
 use App\Models\PeriodOption;
 use App\Models\ProgramOption;
@@ -33,11 +34,17 @@ class EnrollmentController extends Controller
                 'max:100',
                 Rule::exists('period_options', 'name')->where(fn ($query) => $query->where('is_active', true)),
             ],
-            'campus_schedule' => [
+            'campus' => [
                 'required',
                 'string',
                 'max:150',
                 Rule::exists('campus_schedule_options', 'name')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'jornada' => [
+                'required',
+                'string',
+                'max:150',
+                Rule::exists('jornada_options', 'name')->where(fn ($query) => $query->where('is_active', true)),
             ],
             'program' => [
                 'required',
@@ -81,6 +88,7 @@ class EnrollmentController extends Controller
         $data['phone'] = '';
         $data['residence_city'] = $selectedMunicipality->name;
         $data['neighborhood'] = null;
+        $data['campus_schedule'] = $data['campus'] . ' - ' . $data['jornada'];
 
         $data['paid_inscription'] = false;
         $data['paid_tuition'] = false;
@@ -182,7 +190,8 @@ class EnrollmentController extends Controller
 
             $header = [
                 'Periodo',
-                'Sede - jornada',
+                'Sede',
+                'Jornada',
                 'Programa',
                 'Nombres',
                 'Apellidos',
@@ -211,7 +220,8 @@ class EnrollmentController extends Controller
             foreach ($query->cursor() as $enrollment) {
                 $row = [
                     $enrollment->period,
-                    $enrollment->campus_schedule,
+                    $enrollment->campus ?: $this->extractCampusFromLegacy((string) $enrollment->campus_schedule),
+                    $enrollment->jornada ?: $this->extractJornadaFromLegacy((string) $enrollment->campus_schedule),
                     $enrollment->program,
                     trim($enrollment->first_name . ' ' . $enrollment->middle_name),
                     trim($enrollment->last_name . ' ' . $enrollment->second_last_name),
@@ -253,12 +263,14 @@ class EnrollmentController extends Controller
             'REPORTE DE INSCRIPCIONES',
             'Fecha de generacion: ' . $timestamp,
             str_repeat('-', 120),
-            'Fecha | Nombre | Documento | Programa | Depto | Municipio | Pago Inscripcion | Pago Matricula | Estado',
+            'Fecha | Nombre | Documento | Programa | Sede | Jornada | Depto | Municipio | Pago Inscripcion | Pago Matricula | Estado',
             str_repeat('-', 120),
         ];
 
         foreach ($rows as $enrollment) {
             $name = trim($enrollment->first_name . ' ' . $enrollment->middle_name . ' ' . $enrollment->last_name . ' ' . $enrollment->second_last_name);
+            $campus = $enrollment->campus ?: $this->extractCampusFromLegacy((string) $enrollment->campus_schedule);
+            $jornada = $enrollment->jornada ?: $this->extractJornadaFromLegacy((string) $enrollment->campus_schedule);
             $department = optional($enrollment->residenceDepartment)->name ?? '';
             $municipality = optional($enrollment->residenceMunicipality)->name ?: (string) $enrollment->residence_city;
             $line = implode(' | ', [
@@ -266,6 +278,8 @@ class EnrollmentController extends Controller
                 $this->truncateText($name, 28),
                 $enrollment->document_number,
                 $this->truncateText($enrollment->program, 24),
+                $this->truncateText($campus, 18),
+                $this->truncateText($jornada, 18),
                 $this->truncateText($department, 16),
                 $this->truncateText($municipality, 18),
                 $enrollment->paid_inscription ? 'Pagado' : 'Pendiente',
@@ -308,7 +322,7 @@ class EnrollmentController extends Controller
             });
         }
 
-        foreach (['period', 'program', 'campus_schedule'] as $filter) {
+        foreach (['period', 'program', 'campus', 'jornada'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->string($filter)->toString());
             }
@@ -410,7 +424,13 @@ class EnrollmentController extends Controller
                 ->orderBy('name')
                 ->pluck('name')
                 ->all(),
-            'campusSchedules' => CampusScheduleOption::query()
+            'campuses' => CampusScheduleOption::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            'jornadas' => JornadaOption::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
@@ -438,5 +458,19 @@ class EnrollmentController extends Controller
                 'Otro',
             ],
         ];
+    }
+
+    protected function extractCampusFromLegacy(string $value): string
+    {
+        $parts = explode(' - ', $value, 2);
+
+        return trim($parts[0] ?? $value);
+    }
+
+    protected function extractJornadaFromLegacy(string $value): string
+    {
+        $parts = explode(' - ', $value, 2);
+
+        return trim($parts[1] ?? '');
     }
 }

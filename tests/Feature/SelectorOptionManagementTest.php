@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\CampusScheduleOption;
+use App\Models\Department;
+use App\Models\JornadaOption;
+use App\Models\Municipality;
 use App\Models\PeriodOption;
 use App\Models\ProgramOption;
 use App\Models\User;
@@ -44,11 +47,24 @@ class SelectorOptionManagementTest extends TestCase
     {
         PeriodOption::query()->update(['is_active' => false]);
         CampusScheduleOption::query()->update(['is_active' => false]);
+        JornadaOption::query()->update(['is_active' => false]);
         ProgramOption::query()->update(['is_active' => false]);
+
+        $department = Department::create([
+            'name' => 'Antioquia',
+            'is_active' => true,
+        ]);
+
+        $municipality = Municipality::create([
+            'department_id' => $department->id,
+            'name' => 'Medellín',
+            'is_active' => true,
+        ]);
 
         $response = $this->post('/inscripciones', [
             'period' => '2026-1',
-            'campus_schedule' => 'Principal - Fin de Semana',
+            'campus' => 'Vegachí',
+            'jornada' => 'Fin de semana',
             'program' => 'TL Agente de Tránsito',
             'first_name' => 'Laura',
             'middle_name' => 'Sofia',
@@ -58,14 +74,13 @@ class SelectorOptionManagementTest extends TestCase
             'document_number' => '123456789',
             'sex' => 'Femenino',
             'email' => 'laura@example.com',
-            'phone' => '6051234567',
             'mobile' => '3001234567',
             'birth_date' => '2000-05-10',
             'address' => 'Calle 10 # 20-30',
-            'residence_city' => 'Soledad',
-            'neighborhood' => 'Los Robles',
+            'residence_department_id' => $department->id,
+            'residence_municipality_id' => $municipality->id,
         ]);
 
-        $response->assertSessionHasErrors(['period', 'campus_schedule', 'program']);
+        $response->assertSessionHasErrors(['period', 'campus', 'jornada', 'program']);
     }
 }

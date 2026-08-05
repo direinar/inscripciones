@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CampusScheduleOption;
 use App\Models\Department;
 use App\Models\Enrollment;
+use App\Models\JornadaOption;
 use App\Models\Municipality;
 use App\Models\PeriodOption;
 use App\Models\ProgramOption;
@@ -25,7 +26,13 @@ class EnrollmentTest extends TestCase
         ]);
 
         CampusScheduleOption::create([
-            'name' => 'Principal - Fin de Semana',
+            'name' => 'Vegachí',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        JornadaOption::create([
+            'name' => 'Fin de semana',
             'sort_order' => 1,
             'is_active' => true,
         ]);
@@ -59,7 +66,8 @@ class EnrollmentTest extends TestCase
 
         return array_merge([
             'period' => '2026-1',
-            'campus_schedule' => 'Principal - Fin de Semana',
+            'campus' => 'Vegachí',
+            'jornada' => 'Fin de semana',
             'program' => 'TL Agente de Tránsito',
             'first_name' => 'Laura',
             'middle_name' => 'Sofia',
@@ -69,14 +77,11 @@ class EnrollmentTest extends TestCase
             'document_number' => '123456789',
             'sex' => 'Femenino',
             'email' => 'laura@example.com',
-            'phone' => '6051234567',
             'mobile' => '3001234567',
             'birth_date' => '2000-05-10',
             'address' => 'Calle 10 # 20-30',
             'residence_department_id' => $location['department_id'],
             'residence_municipality_id' => $location['municipality_id'],
-            'residence_city' => 'Medellín',
-            'neighborhood' => 'Los Robles',
         ], $overrides);
     }
 

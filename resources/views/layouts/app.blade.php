@@ -540,7 +540,7 @@
             @if (Auth::check() && Auth::user()->isAdmin())
                 <a class="{{ request()->routeIs('users.*') ? 'active' : '' }}"
                     href="{{ route('users.index') }}">Usuarios</a>
-                <a class="{{ request()->routeIs('admin.period-options.*') || request()->routeIs('admin.campus-schedule-options.*') || request()->routeIs('admin.program-options.*') ? 'active' : '' }}"
+                <a class="{{ request()->routeIs('admin.period-options.*') || request()->routeIs('admin.campus-schedule-options.*') || request()->routeIs('admin.jornada-options.*') || request()->routeIs('admin.program-options.*') ? 'active' : '' }}"
                     href="{{ route('admin.period-options.index') }}">Catálogos</a>
                 <a class="{{ request()->routeIs('admin') ? 'active' : '' }}"
                     href="{{ route('admin') }}">Administración</a>

@@ -343,16 +343,30 @@
                             @enderror
                         </div>
                         <div class="field">
-                            <label for="campus_schedule">Sede - jornada *</label>
-                            <select id="campus_schedule" name="campus_schedule" required>
+                            <label for="campus">Sede *</label>
+                            <select id="campus" name="campus" required>
                                 <option value="">Seleccione</option>
-                                @foreach ($campusSchedules as $campusSchedule)
-                                    <option value="{{ $campusSchedule }}"
-                                        {{ old('campus_schedule') === $campusSchedule ? 'selected' : '' }}>
-                                        {{ $campusSchedule }}</option>
+                                @foreach ($campuses as $campus)
+                                    <option value="{{ $campus }}"
+                                        {{ old('campus') === $campus ? 'selected' : '' }}>
+                                        {{ $campus }}</option>
                                 @endforeach
                             </select>
-                            @error('campus_schedule')
+                            @error('campus')
+                                <div class="error">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="field">
+                            <label for="jornada">Jornada *</label>
+                            <select id="jornada" name="jornada" required>
+                                <option value="">Seleccione</option>
+                                @foreach ($jornadas as $jornada)
+                                    <option value="{{ $jornada }}"
+                                        {{ old('jornada') === $jornada ? 'selected' : '' }}>
+                                        {{ $jornada }}</option>
+                                @endforeach
+                            </select>
+                            @error('jornada')
                                 <div class="error">{{ $message }}</div>
                             @enderror
                         </div>

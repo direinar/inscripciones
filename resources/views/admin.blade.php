@@ -34,8 +34,14 @@
 
             <a class="card" href="{{ route('admin.campus-schedule-options.index') }}"
                 style="text-decoration: none; color: inherit; padding: 1.25rem;">
-                <h3 style="margin-bottom: 0.35rem;">Catálogo sede-jornada</h3>
-                <p class="muted" style="margin: 0;">Gestiona las opciones de sede y jornada del formulario.</p>
+                <h3 style="margin-bottom: 0.35rem;">Catálogo de sedes</h3>
+                <p class="muted" style="margin: 0;">Gestiona las sedes del formulario.</p>
+            </a>
+
+            <a class="card" href="{{ route('admin.jornada-options.index') }}"
+                style="text-decoration: none; color: inherit; padding: 1.25rem;">
+                <h3 style="margin-bottom: 0.35rem;">Catálogo de jornadas</h3>
+                <p class="muted" style="margin: 0;">Gestiona las jornadas del formulario.</p>
             </a>
 
             <a class="card" href="{{ route('admin.program-options.index') }}"

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\CampusScheduleOptionController;
+use App\Http\Controllers\Admin\JornadaOptionController;
 use App\Http\Controllers\Admin\PeriodOptionController;
 use App\Http\Controllers\Admin\ProgramOptionController;
 use App\Http\Controllers\EnrollmentController;
@@ -49,6 +50,11 @@ Route::middleware('auth')->group(function () {
             ->parameters(['campus-schedule-options' => 'campusScheduleOption'])
             ->except('show')
             ->names('admin.campus-schedule-options');
+
+        Route::resource('/admin/jornada-options', JornadaOptionController::class)
+            ->parameters(['jornada-options' => 'jornadaOption'])
+            ->except('show')
+            ->names('admin.jornada-options');
 
         Route::resource('/admin/program-options', ProgramOptionController::class)
             ->parameters(['program-options' => 'programOption'])

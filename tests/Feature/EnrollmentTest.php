@@ -99,6 +99,14 @@ class EnrollmentTest extends TestCase
         ]);
     }
 
+    public function test_create_view_uses_a_relative_municipalities_endpoint(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('/municipios-por-departamento')
+            ->assertDontSee('http://localhost/municipios-por-departamento');
+    }
+
     public function test_marketing_user_can_view_enrollment_reports(): void
     {
         /** @var User $mercadeo */

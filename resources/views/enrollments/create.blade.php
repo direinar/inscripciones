@@ -530,6 +530,7 @@
             if (!departmentSelect || !municipalitySelect) return;
 
             var endpoint = @json(route('enrollments.municipalities.by-department'));
+            endpoint = endpoint.startsWith('http') ? endpoint.replace(/^https?:\/\/[^\/]+/, '') : endpoint;
             var selectedMunicipality = municipalitySelect.getAttribute('data-old-value') || '';
 
             function resetMunicipalities(placeholder) {

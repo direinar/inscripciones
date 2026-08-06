@@ -122,20 +122,28 @@ class EnrollmentController extends Controller
 
     public function index(Request $request)
     {
-        $enrollments = $this->filteredQuery($request)
+        $query = $this->filteredQuery($request);
+        $enrollments = (clone $query)
             ->with(['residenceDepartment:id,name', 'residenceMunicipality:id,name'])
-            ->get();
+            ->paginate(10)
+            ->appends($request->query());
 
         return view('enrollments.index', [
             'enrollments' => $enrollments,
             'summary' => [
-                'total' => DB::table('enrollments')->count(),
-                'today' => DB::table('enrollments')->whereDate('created_at', today()->toDateString())->count(),
-                'this_month' => DB::table('enrollments')
+                'total' => (clone $query)->count(),
+                'today' => (clone $query)->whereDate('created_at', today()->toDateString())->count(),
+                'this_month' => (clone $query)
                     ->whereMonth('created_at', today()->month)
                     ->whereYear('created_at', today()->year)
                     ->count(),
-                'active' => DB::table('enrollments')->where('student_status', 'activo')->count(),
+                'pending' => (clone $query)->where('student_status', 'pendiente')->count(),
+                'inscribed' => (clone $query)->where('student_status', 'inscrito')->count(),
+                'matriculated' => (clone $query)->where('student_status', 'matriculado')->count(),
+                'retired' => (clone $query)->where('student_status', 'retirado')->count(),
+                'inscription_paid' => (float) ((clone $query)->where('paid_inscription', true)->sum('inscription_amount_paid') ?? 0),
+                'tuition_paid' => (float) ((clone $query)->where('paid_tuition', true)->sum('tuition_amount_paid') ?? 0),
+                'refunds' => (float) ((clone $query)->whereNotNull('refund_amount')->sum('refund_amount') ?? 0),
             ],
             ...$this->formOptions(),
         ]);
@@ -146,28 +154,85 @@ class EnrollmentController extends Controller
         $data = $request->validate([
             'paid_inscription' => ['nullable', 'boolean'],
             'paid_tuition' => ['nullable', 'boolean'],
+            'inscription_payment_date' => ['nullable', 'date'],
+            'inscription_amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'tuition_payment_date' => ['nullable', 'date'],
+            'tuition_amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'refund_date' => ['nullable', 'date'],
+            'refund_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $updated = false;
 
-        if (array_key_exists('paid_inscription', $data) && (bool) $data['paid_inscription'] && !$enrollment->paid_inscription) {
-            $enrollment->paid_inscription = true;
-            $updated = true;
+        if (array_key_exists('paid_inscription', $data) || array_key_exists('inscription_payment_date', $data) || array_key_exists('inscription_amount_paid', $data)) {
+            $date = $request->input('inscription_payment_date');
+            $amount = $request->input('inscription_amount_paid');
+
+            if ($request->boolean('paid_inscription') && (blank($date) || blank($amount))) {
+                return redirect()->route('enrollments.index', $request->query())->with('error', 'Para registrar la inscripción debes completar la fecha y el valor pagado.');
+            }
+
+            if ($request->boolean('paid_inscription')) {
+                $enrollment->paid_inscription = true;
+                $updated = true;
+            }
         }
 
-        if (array_key_exists('paid_tuition', $data) && (bool) $data['paid_tuition'] && !$enrollment->paid_tuition) {
-            $enrollment->paid_tuition = true;
-            $updated = true;
+        if (array_key_exists('paid_tuition', $data) || array_key_exists('tuition_payment_date', $data) || array_key_exists('tuition_amount_paid', $data)) {
+            $date = $request->input('tuition_payment_date');
+            $amount = $request->input('tuition_amount_paid');
+
+            if ($request->boolean('paid_tuition') && (blank($date) || blank($amount))) {
+                return redirect()->route('enrollments.index', $request->query())->with('error', 'Para registrar la matrícula debes completar la fecha y el valor pagado.');
+            }
+
+            if ($request->boolean('paid_tuition')) {
+                $enrollment->paid_tuition = true;
+                $updated = true;
+            }
         }
 
-        if (!$updated) {
-            return redirect()->route('enrollments.index', $request->query())->with('success', 'Este pago ya estaba registrado.');
+        if (array_key_exists('inscription_payment_date', $data)) {
+            $enrollment->inscription_payment_date = $data['inscription_payment_date'];
+        }
+
+        if (array_key_exists('inscription_amount_paid', $data)) {
+            $enrollment->inscription_amount_paid = $data['inscription_amount_paid'];
+        }
+
+        if (array_key_exists('tuition_payment_date', $data)) {
+            $enrollment->tuition_payment_date = $data['tuition_payment_date'];
+        }
+
+        if (array_key_exists('tuition_amount_paid', $data)) {
+            $enrollment->tuition_amount_paid = $data['tuition_amount_paid'];
+        }
+
+        if (array_key_exists('refund_date', $data) || array_key_exists('refund_amount', $data)) {
+            $date = $request->input('refund_date');
+            $amount = $request->input('refund_amount');
+
+            if ((filled($date) || filled($amount)) && (blank($date) || blank($amount))) {
+                return redirect()->route('enrollments.index', $request->query())->with('error', 'Para registrar una devolución debes completar la fecha y el valor devuelto.');
+            }
+
+            if (array_key_exists('refund_date', $data)) {
+                $enrollment->refund_date = $data['refund_date'];
+            }
+
+            if (array_key_exists('refund_amount', $data)) {
+                $enrollment->refund_amount = $data['refund_amount'];
+            }
+        }
+
+        if (!$updated && !array_key_exists('inscription_payment_date', $data) && !array_key_exists('inscription_amount_paid', $data) && !array_key_exists('tuition_payment_date', $data) && !array_key_exists('tuition_amount_paid', $data) && !array_key_exists('refund_date', $data) && !array_key_exists('refund_amount', $data)) {
+            return redirect()->route('enrollments.index', $request->query())->with('success', 'No se realizaron cambios.');
         }
 
         $enrollment->syncStudentStatus();
         $enrollment->save();
 
-        return redirect()->route('enrollments.index', $request->query())->with('success', 'Pagos actualizados correctamente.');
+        return redirect()->route('enrollments.index', $request->query())->with('success', 'Información actualizada correctamente.');
     }
 
     public function export(Request $request): StreamedResponse
@@ -207,6 +272,12 @@ class EnrollmentController extends Controller
                 'Municipio',
                 'Pago inscripcion',
                 'Pago matricula',
+                'Fecha pago inscripción',
+                'Valor pago inscripción',
+                'Fecha pago matrícula',
+                'Valor pago matrícula',
+                'Fecha devolución',
+                'Valor devolución',
                 'Estado',
                 'Fecha registro',
             ];
@@ -237,6 +308,12 @@ class EnrollmentController extends Controller
                     optional($enrollment->residenceMunicipality)->name ?: $enrollment->residence_city,
                     $enrollment->paid_inscription ? 'Pagado' : 'Pendiente',
                     $enrollment->paid_tuition ? 'Pagado' : 'Pendiente',
+                    optional($enrollment->inscription_payment_date)->format('Y-m-d'),
+                    $enrollment->inscription_amount_paid !== null ? number_format((float) $enrollment->inscription_amount_paid, 2, ',', '.') : '',
+                    optional($enrollment->tuition_payment_date)->format('Y-m-d'),
+                    $enrollment->tuition_amount_paid !== null ? number_format((float) $enrollment->tuition_amount_paid, 2, ',', '.') : '',
+                    optional($enrollment->refund_date)->format('Y-m-d'),
+                    $enrollment->refund_amount !== null ? number_format((float) $enrollment->refund_amount, 2, ',', '.') : '',
                     $enrollment->student_status,
                     $enrollment->created_at->format('Y-m-d H:i:s'),
                 ];
@@ -263,7 +340,7 @@ class EnrollmentController extends Controller
             'REPORTE DE INSCRIPCIONES',
             'Fecha de generacion: ' . $timestamp,
             str_repeat('-', 120),
-            'Fecha | Nombre | Documento | Programa | Sede | Jornada | Depto | Municipio | Pago Inscripcion | Pago Matricula | Estado',
+            'Fecha | Nombre | Documento | Programa | Sede | Jornada | Depto | Municipio | Pago Inscripcion | Pago Matricula | Fecha Pago Inscripción | Valor Pago Inscripción | Fecha Pago Matrícula | Valor Pago Matrícula | Fecha Devolución | Valor Devolución | Estado',
             str_repeat('-', 120),
         ];
 
@@ -284,6 +361,12 @@ class EnrollmentController extends Controller
                 $this->truncateText($municipality, 18),
                 $enrollment->paid_inscription ? 'Pagado' : 'Pendiente',
                 $enrollment->paid_tuition ? 'Pagado' : 'Pendiente',
+                optional($enrollment->inscription_payment_date)->format('Y-m-d'),
+                $enrollment->inscription_amount_paid !== null ? number_format((float) $enrollment->inscription_amount_paid, 2, ',', '.') : '',
+                optional($enrollment->tuition_payment_date)->format('Y-m-d'),
+                $enrollment->tuition_amount_paid !== null ? number_format((float) $enrollment->tuition_amount_paid, 2, ',', '.') : '',
+                optional($enrollment->refund_date)->format('Y-m-d'),
+                $enrollment->refund_amount !== null ? number_format((float) $enrollment->refund_amount, 2, ',', '.') : '',
                 strtoupper((string) $enrollment->student_status),
             ]);
 
@@ -328,12 +411,32 @@ class EnrollmentController extends Controller
             }
         }
 
+        if ($request->filled('status')) {
+            $query->where('student_status', $request->string('status')->toString());
+        }
+
         if ($request->filled('from_date')) {
             $query->where('created_at', '>=', $request->string('from_date')->toString() . ' 00:00:00');
         }
 
         if ($request->filled('to_date')) {
             $query->where('created_at', '<=', $request->string('to_date')->toString() . ' 23:59:59');
+        }
+
+        if ($request->filled('payment_date_from')) {
+            $query->where(function ($builder) use ($request) {
+                $builder
+                    ->whereDate('inscription_payment_date', '>=', $request->string('payment_date_from')->toString())
+                    ->orWhereDate('tuition_payment_date', '>=', $request->string('payment_date_from')->toString());
+            });
+        }
+
+        if ($request->filled('payment_date_to')) {
+            $query->where(function ($builder) use ($request) {
+                $builder
+                    ->whereDate('inscription_payment_date', '<=', $request->string('payment_date_to')->toString())
+                    ->orWhereDate('tuition_payment_date', '<=', $request->string('payment_date_to')->toString());
+            });
         }
 
         return $query;

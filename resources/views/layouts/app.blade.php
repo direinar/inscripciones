@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Sistema')</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <style>
         :root {
             --bg: #f4f7fb;
@@ -105,6 +107,39 @@
         .sidebar a:hover,
         .sidebar a.active {
             background: rgba(255, 255, 255, 0.12);
+        }
+
+        .sidebar-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            padding-top: 0.7rem;
+            margin-top: 0.1rem;
+        }
+
+        .sidebar-section__title {
+            font-size: 0.74rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #93c5fd;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .sidebar-section a {
+            font-size: 0.92rem;
+            padding: 0.58rem 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-section a span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            margin-right: 0.45rem;
+            font-size: 0.75rem;
         }
 
         .main {
@@ -318,22 +353,217 @@
         }
 
         .table-wrap table {
-            min-width: 900px;
+            min-width: 920px;
         }
 
         th,
         td {
-            padding: 0.85rem;
+            padding: 0.9rem 0.8rem;
             border-bottom: 1px solid var(--border);
             text-align: left;
-            vertical-align: middle;
+            vertical-align: top;
         }
 
         th {
             color: var(--muted);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
+        }
+
+        .table-modern tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        .pagination-wrap {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .pagination li a,
+        .pagination li span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.25rem;
+            min-height: 2.25rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--primary-dark);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .pagination li.active span {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .pagination li.disabled span {
+            color: var(--muted);
+            background: #f8fafc;
+        }
+
+        .person-block,
+        .program-block,
+        .movement-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .person-name {
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .person-meta {
+            font-size: 0.84rem;
+            color: var(--muted);
+        }
+
+        .movement-item {
+            display: grid;
+            gap: 0.16rem;
+            padding: 0.45rem 0.55rem;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .movement-item span {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        .movement-item small {
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .action-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .action-pill {
+            border: 1px solid transparent;
+            border-radius: 999px;
+            padding: 0.47rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #0f172a;
+            cursor: pointer;
+            background: #eef4ff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .action-pill:hover {
+            transform: translateY(-1px);
+        }
+
+        .action-pill--inscription {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .action-pill--tuition {
+            background: #f0fdf4;
+            color: #15803d;
+        }
+
+        .action-pill--refund {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        .payment-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 70;
+            padding: 1rem;
+        }
+
+        .payment-modal.is-open {
+            display: flex;
+        }
+
+        .payment-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(6px);
+        }
+
+        .payment-modal__card {
+            position: relative;
+            width: min(100%, 480px);
+            background: white;
+            border-radius: 22px;
+            padding: 1.3rem;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+            z-index: 1;
+        }
+
+        .payment-modal__close {
+            position: absolute;
+            top: 0.8rem;
+            right: 0.8rem;
+            border: none;
+            background: transparent;
+            font-size: 1.4rem;
+            color: var(--muted);
+            cursor: pointer;
+        }
+
+        .payment-modal__eyebrow {
+            display: inline-block;
+            padding: 0.32rem 0.6rem;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: var(--primary-dark);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.55rem;
+        }
+
+        .payment-modal__error {
+            min-height: 1.1rem;
+            margin-top: 0.2rem;
+            color: var(--danger);
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .actions-row--end {
+            justify-content: flex-end;
+            margin-top: 0.8rem;
+        }
+
+        body.modal-open {
+            overflow: hidden;
         }
 
         .flash {
@@ -458,6 +688,16 @@
                 min-width: 0;
             }
 
+            .action-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .action-pill {
+                width: 100%;
+                text-align: center;
+            }
+
             .hide-sm {
                 display: none;
             }
@@ -536,6 +776,28 @@
             @if (Auth::check())
                 <a class="{{ request()->routeIs('enrollments.index') ? 'active' : '' }}"
                     href="{{ route('enrollments.index') }}">Inscripciones</a>
+                <div class="sidebar-section">
+                    <div class="sidebar-section__title">Reportes por estado</div>
+                    <a class="{{ request('status') === null ? 'active' : '' }}" href="{{ route('enrollments.index') }}">
+                        <span>•</span>Todos
+                    </a>
+                    <a class="{{ request('status') === 'pendiente' ? 'active' : '' }}"
+                        href="{{ route('enrollments.index', ['status' => 'pendiente']) }}">
+                        <span>⏳</span>Pendientes
+                    </a>
+                    <a class="{{ request('status') === 'inscrito' ? 'active' : '' }}"
+                        href="{{ route('enrollments.index', ['status' => 'inscrito']) }}">
+                        <span>✓</span>Inscritos
+                    </a>
+                    <a class="{{ request('status') === 'matriculado' ? 'active' : '' }}"
+                        href="{{ route('enrollments.index', ['status' => 'matriculado']) }}">
+                        <span>🎓</span>Matriculados
+                    </a>
+                    <a class="{{ request('status') === 'retirado' ? 'active' : '' }}"
+                        href="{{ route('enrollments.index', ['status' => 'retirado']) }}">
+                        <span>↺</span>Retirados
+                    </a>
+                </div>
             @endif
             @if (Auth::check() && Auth::user()->isAdmin())
                 <a class="{{ request()->routeIs('users.*') ? 'active' : '' }}"

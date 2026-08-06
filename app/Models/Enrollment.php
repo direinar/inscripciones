@@ -31,6 +31,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'paid_inscription',
     'paid_tuition',
     'student_status',
+    'inscription_payment_date',
+    'inscription_amount_paid',
+    'tuition_payment_date',
+    'tuition_amount_paid',
+    'refund_date',
+    'refund_amount',
 ])]
 class Enrollment extends Model
 {
@@ -40,6 +46,12 @@ class Enrollment extends Model
             'birth_date' => 'date',
             'paid_inscription' => 'boolean',
             'paid_tuition' => 'boolean',
+            'inscription_payment_date' => 'date',
+            'tuition_payment_date' => 'date',
+            'refund_date' => 'date',
+            'inscription_amount_paid' => 'decimal:2',
+            'tuition_amount_paid' => 'decimal:2',
+            'refund_amount' => 'decimal:2',
             'residence_department_id' => 'integer',
             'residence_municipality_id' => 'integer',
         ];
@@ -57,6 +69,21 @@ class Enrollment extends Model
 
     public function syncStudentStatus(): void
     {
-        $this->student_status = $this->paid_inscription && $this->paid_tuition ? 'activo' : 'pendiente';
+        if ($this->refund_amount && $this->refund_date) {
+            $this->student_status = 'retirado';
+            return;
+        }
+
+        if ($this->paid_inscription && $this->paid_tuition) {
+            $this->student_status = 'matriculado';
+            return;
+        }
+
+        if ($this->paid_inscription) {
+            $this->student_status = 'inscrito';
+            return;
+        }
+
+        $this->student_status = 'pendiente';
     }
 }

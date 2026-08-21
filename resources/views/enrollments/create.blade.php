@@ -313,9 +313,6 @@
                         El equipo administrativo y de mercadeo podrá hacer seguimiento interno a tu registro.</p>
                 </div>
             </div>
-            <div class="hero-actions">
-                <a class="btn btn-ghost" href="{{ route('login') }}">Acceso interno</a>
-            </div>
         </div>
 
         <div class="card">
@@ -469,22 +466,6 @@
                             <input id="mobile" name="mobile" type="text" value="{{ old('mobile') }}"
                                 required>
                             @error('mobile')
-                                <div class="error">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="field">
-                            <label for="birth_date">Fecha de nacimiento *</label>
-                            <input id="birth_date" name="birth_date" type="date" value="{{ old('birth_date') }}"
-                                required>
-                            @error('birth_date')
-                                <div class="error">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="field">
-                            <label for="address">Dirección *</label>
-                            <input id="address" name="address" type="text" value="{{ old('address') }}"
-                                required>
-                            @error('address')
                                 <div class="error">{{ $message }}</div>
                             @enderror
                         </div>

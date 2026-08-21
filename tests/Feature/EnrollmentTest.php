@@ -120,7 +120,7 @@ class EnrollmentTest extends TestCase
             ->assertSee('Laura');
     }
 
-    public function test_admin_can_export_enrollment_reports_as_csv(): void
+    public function test_admin_can_export_enrollment_reports_as_excel(): void
     {
         /** @var User $admin */
         $admin = User::factory()->create(['role' => 'admin']);
@@ -130,7 +130,30 @@ class EnrollmentTest extends TestCase
             ->get('/reportes/inscripciones/exportar');
 
         $response->assertOk();
-        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $response->assertHeader('content-type', 'application/vnd.ms-excel; charset=UTF-8');
+    }
+
+    public function test_marketing_user_can_view_financial_report_by_movement_dates(): void
+    {
+        /** @var User $mercadeo */
+        $mercadeo = User::factory()->create(['role' => 'mercadeo']);
+        $enrollment = Enrollment::create($this->enrollmentPayload());
+
+        $this->actingAs($mercadeo)
+            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+                'movement_type' => 'payment',
+                'concept' => 'inscription',
+                'movement_date' => '2026-08-18',
+                'movement_amount' => 60000,
+            ])
+            ->assertRedirect('/reportes/inscripciones');
+
+        $this->actingAs($mercadeo)
+            ->get('/reportes/financieros?payment_date_from=2026-08-18&payment_date_to=2026-08-18')
+            ->assertOk()
+            ->assertSee('Reporte financiero')
+            ->assertSee('Laura')
+            ->assertSee('Pago');
     }
 
     public function test_marketing_user_can_update_payment_status_and_activate_student(): void
@@ -141,7 +164,10 @@ class EnrollmentTest extends TestCase
 
         $this->actingAs($mercadeo)
             ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
-                'paid_inscription' => 1,
+                'movement_type' => 'payment',
+                'concept' => 'inscription',
+                'movement_date' => '2026-08-18',
+                'movement_amount' => 60000,
             ])
             ->assertRedirect('/reportes/inscripciones');
 
@@ -149,12 +175,15 @@ class EnrollmentTest extends TestCase
             'id' => $enrollment->id,
             'paid_inscription' => true,
             'paid_tuition' => false,
-            'student_status' => 'pendiente',
+            'student_status' => 'inscrito',
         ]);
 
         $this->actingAs($mercadeo)
             ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
-                'paid_tuition' => 1,
+                'movement_type' => 'payment',
+                'concept' => 'tuition',
+                'movement_date' => '2026-08-19',
+                'movement_amount' => 185000,
             ])
             ->assertRedirect('/reportes/inscripciones');
 
@@ -162,7 +191,39 @@ class EnrollmentTest extends TestCase
             'id' => $enrollment->id,
             'paid_inscription' => true,
             'paid_tuition' => true,
-            'student_status' => 'activo',
+            'student_status' => 'matriculado',
+        ]);
+
+        $this->actingAs($mercadeo)
+            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+                'movement_type' => 'refund',
+                'concept' => 'tuition',
+                'movement_date' => '2026-08-20',
+                'movement_amount' => 185000,
+            ])
+            ->assertRedirect('/reportes/inscripciones');
+
+        $this->assertDatabaseHas('enrollments', [
+            'id' => $enrollment->id,
+            'paid_inscription' => true,
+            'paid_tuition' => false,
+            'student_status' => 'inscrito',
+        ]);
+
+        $this->actingAs($mercadeo)
+            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+                'movement_type' => 'refund',
+                'concept' => 'inscription',
+                'movement_date' => '2026-08-20',
+                'movement_amount' => 60000,
+            ])
+            ->assertRedirect('/reportes/inscripciones');
+
+        $this->assertDatabaseHas('enrollments', [
+            'id' => $enrollment->id,
+            'paid_inscription' => false,
+            'paid_tuition' => false,
+            'student_status' => 'pendiente',
         ]);
     }
 }

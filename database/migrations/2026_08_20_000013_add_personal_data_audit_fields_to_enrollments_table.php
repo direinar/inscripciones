@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('enrollments', function (Blueprint $table) {
+            $table->foreignId('personal_data_updated_by')
+                ->nullable()
+                ->after('neighborhood')
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->timestamp('personal_data_updated_at')
+                ->nullable()
+                ->after('personal_data_updated_by');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('enrollments', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('personal_data_updated_by');
+            $table->dropColumn('personal_data_updated_at');
+        });
+    }
+};

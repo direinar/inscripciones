@@ -33,6 +33,12 @@
                 <p class="muted" style="margin: 0;">Consulta los registros recibidos y exporta la información a CSV.</p>
             </a>
 
+            <a class="card" href="{{ route('enrollments.financial') }}"
+                style="text-decoration: none; color: inherit; padding: 1.25rem;">
+                <h3 style="margin-bottom: 0.35rem;">Reporte financiero</h3>
+                <p class="muted" style="margin: 0;">Revisa pagos y devoluciones por fechas de movimiento.</p>
+            </a>
+
             <a class="card" href="{{ route('enrollments.create') }}" target="_blank"
                 style="text-decoration: none; color: inherit; padding: 1.25rem;">
                 <h3 style="margin-bottom: 0.35rem;">Formulario público</h3>

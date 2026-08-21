@@ -28,9 +28,13 @@ Route::middleware('auth')->group(function () {
     Route::middleware(RoleMiddleware::class . ':admin,mercadeo')->group(function () {
         Route::get('/reportes/inscripciones', [EnrollmentController::class, 'index'])->name('enrollments.index');
         Route::get('/reportes/inscripciones/exportar', [EnrollmentController::class, 'export'])->name('enrollments.export');
+        Route::get('/reportes/financieros', [EnrollmentController::class, 'financialReport'])->name('enrollments.financial');
+        Route::get('/reportes/financieros/exportar/excel', [EnrollmentController::class, 'exportFinancialExcel'])->name('enrollments.financial.export.excel');
+        Route::get('/reportes/financieros/exportar/pdf', [EnrollmentController::class, 'exportFinancialPdf'])->name('enrollments.financial.export.pdf');
         Route::get('/reportes/inscripciones/exportar/excel', [EnrollmentController::class, 'exportExcel'])->name('enrollments.export.excel');
         Route::get('/reportes/inscripciones/exportar/pdf', [EnrollmentController::class, 'exportPdf'])->name('enrollments.export.pdf');
         Route::patch('/reportes/inscripciones/{enrollment}/pagos', [EnrollmentController::class, 'updatePayments'])->name('enrollments.payments.update');
+        Route::patch('/reportes/inscripciones/{enrollment}/datos-personales', [EnrollmentController::class, 'updatePersonalData'])->name('enrollments.personal-data.update');
     });
 
     Route::middleware(RoleMiddleware::class . ':admin')->group(function () {

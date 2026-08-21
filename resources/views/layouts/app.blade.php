@@ -776,9 +776,12 @@
             @if (Auth::check())
                 <a class="{{ request()->routeIs('enrollments.index') ? 'active' : '' }}"
                     href="{{ route('enrollments.index') }}">Inscripciones</a>
+                <a class="{{ request()->routeIs('enrollments.financial') ? 'active' : '' }}"
+                    href="{{ route('enrollments.financial') }}">Reporte financiero</a>
                 <div class="sidebar-section">
                     <div class="sidebar-section__title">Reportes por estado</div>
-                    <a class="{{ request('status') === null ? 'active' : '' }}" href="{{ route('enrollments.index') }}">
+                    <a class="{{ request('status') === null ? 'active' : '' }}"
+                        href="{{ route('enrollments.index') }}">
                         <span>•</span>Todos
                     </a>
                     <a class="{{ request('status') === 'pendiente' ? 'active' : '' }}"

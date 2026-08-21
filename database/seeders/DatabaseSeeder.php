@@ -34,10 +34,10 @@ class DatabaseSeeder extends Seeder
         );
 
         User::updateOrInsert(
-            ['email' => 'mercadeo@example.com'],
+            ['email' => 'lmorales@educares.edu.co'],
             [
-                'name' => 'Mercadeo',
-                'role' => 'mercadeo',
+                'name' => 'Administrador',
+                'role' => 'Administrador',
                 'password' => Hash::make('password123'),
             ]
         );

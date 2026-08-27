@@ -10,10 +10,9 @@ use App\Models\Municipality;
 use App\Models\PeriodOption;
 use App\Models\ProgramOption;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -88,7 +87,7 @@ class EnrollmentController extends Controller
         $data['address'] = 'No registrada';
         $data['residence_city'] = $selectedMunicipality->name;
         $data['neighborhood'] = null;
-        $data['campus_schedule'] = $data['campus'] . ' - ' . $data['jornada'];
+        $data['campus_schedule'] = $data['campus'].' - '.$data['jornada'];
 
         $data['paid_inscription'] = false;
         $data['paid_tuition'] = false;
@@ -145,6 +144,27 @@ class EnrollmentController extends Controller
         ]);
     }
 
+    public function prospects(Request $request)
+    {
+        $enrollments = $this->filteredQuery($request)
+            ->paginate(15)
+            ->appends($request->query());
+
+        return view('prospects.index', [
+            'enrollments' => $enrollments,
+            ...$this->formOptions(),
+        ]);
+    }
+
+    public function marketing(Request $request)
+    {
+        $enrollments = $this->filteredQuery($request)
+            ->paginate(15)
+            ->appends($request->query());
+
+        return view('marketing.index', compact('enrollments'));
+    }
+
     public function financialReport(Request $request)
     {
         $query = $this->filteredQuery($request);
@@ -153,6 +173,13 @@ class EnrollmentController extends Controller
             ->get();
 
         $rows = $this->buildFinancialMovementRows($enrollments, $request);
+
+        if ($request->input('module') === 'pagos') {
+            $rows = collect($rows)
+                ->where('movement_type', 'payment')
+                ->values()
+                ->all();
+        }
 
         usort($rows, function (array $left, array $right): int {
             $dateComparison = $right['movement_date']->timestamp <=> $left['movement_date']->timestamp;
@@ -195,7 +222,7 @@ class EnrollmentController extends Controller
             return $right['movement_date']->timestamp <=> $left['movement_date']->timestamp;
         });
 
-        $filename = 'reporte-financiero-' . Carbon::now()->format('Ymd-His') . '.xls';
+        $filename = 'reporte-financiero-'.Carbon::now()->format('Ymd-His').'.xls';
 
         return response()->streamDownload(function () use ($rows) {
             echo '<?xml version="1.0"?>';
@@ -221,7 +248,7 @@ class EnrollmentController extends Controller
 
             echo '<Row>';
             foreach ($header as $column) {
-                echo '<Cell><Data ss:Type="String">' . e($column) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">'.e($column).'</Data></Cell>';
             }
             echo '</Row>';
 
@@ -242,7 +269,7 @@ class EnrollmentController extends Controller
 
                 echo '<Row>';
                 foreach ($excelRow as $column) {
-                    echo '<Cell><Data ss:Type="String">' . e((string) ($column ?? '')) . '</Data></Cell>';
+                    echo '<Cell><Data ss:Type="String">'.e((string) ($column ?? '')).'</Data></Cell>';
                 }
                 echo '</Row>';
             }
@@ -267,11 +294,11 @@ class EnrollmentController extends Controller
         });
 
         $pdfContent = $this->buildFinancialTextPdf($rows, $request);
-        $filename = 'reporte-financiero-' . Carbon::now()->format('Ymd-His') . '.pdf';
+        $filename = 'reporte-financiero-'.Carbon::now()->format('Ymd-His').'.pdf';
 
         return response($pdfContent, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -292,7 +319,7 @@ class EnrollmentController extends Controller
         if ($data['movement_type'] === 'payment') {
             if ($refundAmount > $requestedAmount) {
                 return redirect()->route('enrollments.index', $request->query())
-                    ->with('error', 'El valor pagado no puede ser menor que la devolución acumulada para ' . $this->conceptLabel($data['concept']) . '.');
+                    ->with('error', 'El valor pagado no puede ser menor que la devolución acumulada para '.$this->conceptLabel($data['concept']).'.');
             }
 
             $enrollment->{$fields['payment_date']} = $data['movement_date'];
@@ -304,12 +331,12 @@ class EnrollmentController extends Controller
 
             if ($availableBalance <= 0) {
                 return redirect()->route('enrollments.index', $request->query())
-                    ->with('error', 'No hay saldo disponible para devolver en ' . $this->conceptLabel($data['concept']) . '.');
+                    ->with('error', 'No hay saldo disponible para devolver en '.$this->conceptLabel($data['concept']).'.');
             }
 
             if ($requestedAmount > $availableBalance) {
                 return redirect()->route('enrollments.index', $request->query())
-                    ->with('error', 'La devolución supera el saldo disponible de ' . $this->conceptLabel($data['concept']) . '.');
+                    ->with('error', 'La devolución supera el saldo disponible de '.$this->conceptLabel($data['concept']).'.');
             }
 
             $enrollment->{$fields['refund_date']} = $data['movement_date'];
@@ -320,8 +347,8 @@ class EnrollmentController extends Controller
         $enrollment->save();
 
         $message = $data['movement_type'] === 'payment'
-            ? 'Pago de ' . $this->conceptLabel($data['concept']) . ' registrado correctamente.'
-            : 'Devolución de ' . $this->conceptLabel($data['concept']) . ' registrada correctamente.';
+            ? 'Pago de '.$this->conceptLabel($data['concept']).' registrado correctamente.'
+            : 'Devolución de '.$this->conceptLabel($data['concept']).' registrada correctamente.';
 
         return redirect()->route('enrollments.index', $request->query())->with('success', $message);
     }
@@ -360,7 +387,7 @@ class EnrollmentController extends Controller
     public function exportExcel(Request $request): StreamedResponse
     {
         $query = $this->filteredQuery($request);
-        $filename = 'reporte-inscripciones-' . Carbon::now()->format('Ymd-His') . '.xls';
+        $filename = 'reporte-inscripciones-'.Carbon::now()->format('Ymd-His').'.xls';
 
         return response()->streamDownload(function () use ($query) {
             echo '<?xml version="1.0"?>';
@@ -403,7 +430,7 @@ class EnrollmentController extends Controller
 
             echo '<Row>';
             foreach ($header as $column) {
-                echo '<Cell><Data ss:Type="String">' . e($column) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">'.e($column).'</Data></Cell>';
             }
             echo '</Row>';
 
@@ -413,8 +440,8 @@ class EnrollmentController extends Controller
                     $enrollment->campus ?: $this->extractCampusFromLegacy((string) $enrollment->campus_schedule),
                     $enrollment->jornada ?: $this->extractJornadaFromLegacy((string) $enrollment->campus_schedule),
                     $enrollment->program,
-                    trim($enrollment->first_name . ' ' . $enrollment->middle_name),
-                    trim($enrollment->last_name . ' ' . $enrollment->second_last_name),
+                    trim($enrollment->first_name.' '.$enrollment->middle_name),
+                    trim($enrollment->last_name.' '.$enrollment->second_last_name),
                     $enrollment->document_type,
                     $enrollment->document_number,
                     $enrollment->sex,
@@ -441,7 +468,7 @@ class EnrollmentController extends Controller
 
                 echo '<Row>';
                 foreach ($row as $column) {
-                    echo '<Cell><Data ss:Type="String">' . e((string) ($column ?? '')) . '</Data></Cell>';
+                    echo '<Cell><Data ss:Type="String">'.e((string) ($column ?? '')).'</Data></Cell>';
                 }
                 echo '</Row>';
             }
@@ -456,11 +483,11 @@ class EnrollmentController extends Controller
     {
         $rows = $this->filteredQuery($request)->get();
         $pdfContent = $this->buildStyledReportPdf($rows, $request);
-        $filename = 'reporte-inscripciones-' . Carbon::now()->format('Ymd-His') . '.pdf';
+        $filename = 'reporte-inscripciones-'.Carbon::now()->format('Ymd-His').'.pdf';
 
         return response($pdfContent, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -494,11 +521,11 @@ class EnrollmentController extends Controller
         }
 
         if ($request->filled('from_date')) {
-            $query->where('created_at', '>=', $request->string('from_date')->toString() . ' 00:00:00');
+            $query->where('created_at', '>=', $request->string('from_date')->toString().' 00:00:00');
         }
 
         if ($request->filled('to_date')) {
-            $query->where('created_at', '<=', $request->string('to_date')->toString() . ' 23:59:59');
+            $query->where('created_at', '<=', $request->string('to_date')->toString().' 23:59:59');
         }
 
         if ($request->filled('payment_date_from')) {
@@ -543,6 +570,7 @@ class EnrollmentController extends Controller
             $baseData = [
                 'student_name' => $studentName,
                 'document_number' => $enrollment->document_number,
+                'period' => $enrollment->period,
                 'program' => $enrollment->program,
                 'campus' => $campus,
                 'jornada' => $jornada,
@@ -642,7 +670,7 @@ class EnrollmentController extends Controller
 
         foreach ($labels as $field => $label) {
             if ($request->filled($field)) {
-                $parts[] = $label . ': ' . $request->string($field)->toString();
+                $parts[] = $label.': '.$request->string($field)->toString();
             }
         }
 
@@ -653,9 +681,9 @@ class EnrollmentController extends Controller
     {
         $lines = [
             'REPORTE FINANCIERO',
-            'Generado: ' . Carbon::now()->format('d/m/Y H:i'),
-            'Filtros: ' . $this->financialFilterSummary($request),
-            'Total de movimientos: ' . count($rows),
+            'Generado: '.Carbon::now()->format('d/m/Y H:i'),
+            'Filtros: '.$this->financialFilterSummary($request),
+            'Total de movimientos: '.count($rows),
             str_repeat('-', 118),
             'Fecha | Tipo | Concepto | Estudiante | Documento | Programa | Sede | Valor | Neto actual | Estado',
             str_repeat('-', 118),
@@ -704,11 +732,11 @@ class EnrollmentController extends Controller
 
         $objects = [
             '<< /Type /Catalog /Pages 2 0 R >>',
-            '<< /Type /Pages /Kids [' . implode(' ', array_map(fn ($pageObject) => $pageObject . ' 0 R', $pageObjects)) . '] /Count ' . $pageCount . ' >>',
+            '<< /Type /Pages /Kids ['.implode(' ', array_map(fn ($pageObject) => $pageObject.' 0 R', $pageObjects)).'] /Count '.$pageCount.' >>',
         ];
 
         foreach ($pageObjects as $index => $pageObject) {
-            $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' . $pageWidth . ' ' . $pageHeight . '] /Resources << /Font << /F1 ' . $fontObject . ' 0 R >> >> /Contents ' . $contentObjects[$index] . ' 0 R >>';
+            $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '.$pageWidth.' '.$pageHeight.'] /Resources << /Font << /F1 '.$fontObject.' 0 R >> >> /Contents '.$contentObjects[$index].' 0 R >>';
         }
 
         foreach ($chunks as $chunk) {
@@ -716,16 +744,17 @@ class EnrollmentController extends Controller
                 $text = utf8_decode((string) $line);
                 $text = str_replace('\\', '\\\\', $text);
                 $text = str_replace('(', '\\(', $text);
+
                 return str_replace(')', '\\)', $text);
             }, $chunk);
 
             $stream = "BT\n/F1 9 Tf\n12 TL\n36 560 Td\n";
             foreach ($escaped as $line) {
-                $stream .= '(' . $line . ") Tj\nT*\n";
+                $stream .= '('.$line.") Tj\nT*\n";
             }
             $stream .= 'ET';
 
-            $objects[] = '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream";
+            $objects[] = '<< /Length '.strlen($stream)." >>\nstream\n".$stream."\nendstream";
         }
 
         $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
@@ -736,19 +765,19 @@ class EnrollmentController extends Controller
 
         foreach ($objects as $index => $object) {
             $offsets[] = strlen($pdf);
-            $pdf .= ($index + 1) . " 0 obj\n" . $object . "\nendobj\n";
+            $pdf .= ($index + 1)." 0 obj\n".$object."\nendobj\n";
         }
 
         $xrefOffset = strlen($pdf);
-        $pdf .= "xref\n0 " . (count($objects) + 1) . "\n";
+        $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
         $pdf .= "0000000000 65535 f \n";
 
         for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT)." 00000 n \n";
         }
 
-        $pdf .= 'trailer << /Size ' . (count($objects) + 1) . ' /Root 1 0 R >>' . "\n";
-        $pdf .= 'startxref' . "\n" . $xrefOffset . "\n%%EOF";
+        $pdf .= 'trailer << /Size '.(count($objects) + 1).' /Root 1 0 R >>'."\n";
+        $pdf .= 'startxref'."\n".$xrefOffset."\n%%EOF";
 
         return $pdf;
     }
@@ -785,7 +814,7 @@ class EnrollmentController extends Controller
             return $normalized;
         }
 
-        return mb_substr($normalized, 0, $max - 3) . '...';
+        return mb_substr($normalized, 0, $max - 3).'...';
     }
 
     protected function buildStyledReportPdf($rows, Request $request): string
@@ -811,18 +840,18 @@ class EnrollmentController extends Controller
 
         $objects = [
             '<< /Type /Catalog /Pages 2 0 R >>',
-            '<< /Type /Pages /Kids [' . implode(' ', array_map(fn ($pageObject) => $pageObject . ' 0 R', $pageObjects)) . '] /Count ' . $pageCount . ' >>',
+            '<< /Type /Pages /Kids ['.implode(' ', array_map(fn ($pageObject) => $pageObject.' 0 R', $pageObjects)).'] /Count '.$pageCount.' >>',
         ];
 
         foreach ($pageObjects as $index => $pageObject) {
-            $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 792 612] /Resources << /Font << /F1 ' . $regularFontObject . ' 0 R /F2 ' . $boldFontObject . ' 0 R >> >> /Contents ' . $contentObjects[$index] . ' 0 R >>';
+            $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 792 612] /Resources << /Font << /F1 '.$regularFontObject.' 0 R /F2 '.$boldFontObject.' 0 R >> >> /Contents '.$contentObjects[$index].' 0 R >>';
         }
 
         $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
         $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
 
         foreach ($pages as $pageCommands) {
-            $objects[] = '<< /Length ' . strlen($pageCommands) . " >>\nstream\n" . $pageCommands . "\nendstream";
+            $objects[] = '<< /Length '.strlen($pageCommands)." >>\nstream\n".$pageCommands."\nendstream";
         }
 
         $pdf = "%PDF-1.4\n";
@@ -830,19 +859,19 @@ class EnrollmentController extends Controller
 
         foreach ($objects as $index => $object) {
             $offsets[] = strlen($pdf);
-            $pdf .= ($index + 1) . " 0 obj\n" . $object . "\nendobj\n";
+            $pdf .= ($index + 1)." 0 obj\n".$object."\nendobj\n";
         }
 
         $xrefOffset = strlen($pdf);
-        $pdf .= "xref\n0 " . (count($objects) + 1) . "\n";
+        $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
         $pdf .= "0000000000 65535 f \n";
 
         for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT)." 00000 n \n";
         }
 
-        $pdf .= 'trailer << /Size ' . (count($objects) + 1) . ' /Root 1 0 R >>' . "\n";
-        $pdf .= 'startxref' . "\n" . $xrefOffset . "\n%%EOF";
+        $pdf .= 'trailer << /Size '.(count($objects) + 1).' /Root 1 0 R >>'."\n";
+        $pdf .= 'startxref'."\n".$xrefOffset."\n%%EOF";
 
         return $pdf;
     }
@@ -876,7 +905,7 @@ class EnrollmentController extends Controller
         $commands[] = $this->pdfRect(24, 534, 744, 1, '0.90 0.90 0.90 rg', '0.90 0.90 0.90 RG', 0);
         $commands[] = $this->pdfTextAt(40, 556, 'REPORTE DE INSCRIPCIONES', 18, 'F2', '0.12 0.12 0.12 rg');
         $commands[] = $this->pdfTextAt(40, 540, 'No hay registros para los filtros seleccionados.', 11, 'F1', '0.26 0.26 0.26 rg');
-        $commands[] = $this->pdfTextAt(40, 520, 'Generado: ' . Carbon::now()->format('d/m/Y H:i'), 9, 'F1', '0.42 0.42 0.42 rg');
+        $commands[] = $this->pdfTextAt(40, 520, 'Generado: '.Carbon::now()->format('d/m/Y H:i'), 9, 'F1', '0.42 0.42 0.42 rg');
         $commands[] = $this->pdfTextAt(24, 24, 'Sistema de inscripciones', 8, 'F1', '0.55 0.55 0.55 rg');
 
         return implode("\n", $commands);
@@ -901,10 +930,10 @@ class EnrollmentController extends Controller
         $commands[] = $this->pdfRect($margin, $pageHeight - 16, $cardWidth, 1, '0.75 0.75 0.75 rg', '0.75 0.75 0.75 RG', 0);
         $commands[] = $this->pdfTextAt(40, 552, 'REPORTE DE INSCRIPCIONES', 18, 'F2', '0.12 0.12 0.12 rg');
         $commands[] = $this->pdfTextAt(40, 535, 'Vista ejecutiva con datos académicos, financieros y de contacto', 10, 'F1', '0.28 0.28 0.28 rg');
-        $commands[] = $this->pdfTextAt(40, 520, 'Generado: ' . Carbon::now()->format('d/m/Y H:i'), 9, 'F1', '0.42 0.42 0.42 rg');
-        $commands[] = $this->pdfTextAt(590, 552, 'Página ' . $pageNumber . ' de ' . $pageCount, 10, 'F2', '0.22 0.22 0.22 rg');
+        $commands[] = $this->pdfTextAt(40, 520, 'Generado: '.Carbon::now()->format('d/m/Y H:i'), 9, 'F1', '0.42 0.42 0.42 rg');
+        $commands[] = $this->pdfTextAt(590, 552, 'Página '.$pageNumber.' de '.$pageCount, 10, 'F2', '0.22 0.22 0.22 rg');
 
-        $summaryText = 'Filtros: ' . $this->pdfFilterSummary($request) . ' | Total de registros: ' . $totalCount;
+        $summaryText = 'Filtros: '.$this->pdfFilterSummary($request).' | Total de registros: '.$totalCount;
         $commands[] = $this->pdfRect($margin, 500, $cardWidth, $summaryHeight, '1 1 1 rg', '0.88 0.88 0.88 RG', 0.4);
         $commands[] = $this->pdfTextAt(40, 516, $this->truncateText($summaryText, 125), 9, 'F1', '0.30 0.30 0.30 rg');
 
@@ -939,10 +968,10 @@ class EnrollmentController extends Controller
         ])));
         $commands[] = $this->pdfTextAt($x + 16, $top - 44, $this->truncateText($fullName, 52), 13, 'F2', '0.10 0.10 0.10 rg');
 
-        $commands[] = $this->pdfTextAt($x + 16, $top - 60, 'Documento: ' . trim(($enrollment->document_type ?: '-') . ' ' . ($enrollment->document_number ?: '-')), 8, 'F1', '0.30 0.30 0.30 rg');
-        $commands[] = $this->pdfTextAt($x + 250, $top - 60, 'Sexo: ' . ($enrollment->sex ?: '-'), 8, 'F1', '0.30 0.30 0.30 rg');
-        $commands[] = $this->pdfTextAt($x + 360, $top - 60, 'Estado: ' . strtoupper((string) $enrollment->student_status), 8, 'F1', '0.30 0.30 0.30 rg');
-        $commands[] = $this->pdfTextAt($x + 540, $top - 60, 'Registro: ' . $enrollment->created_at->format('d/m/Y H:i'), 8, 'F1', '0.30 0.30 0.30 rg');
+        $commands[] = $this->pdfTextAt($x + 16, $top - 60, 'Documento: '.trim(($enrollment->document_type ?: '-').' '.($enrollment->document_number ?: '-')), 8, 'F1', '0.30 0.30 0.30 rg');
+        $commands[] = $this->pdfTextAt($x + 250, $top - 60, 'Sexo: '.($enrollment->sex ?: '-'), 8, 'F1', '0.30 0.30 0.30 rg');
+        $commands[] = $this->pdfTextAt($x + 360, $top - 60, 'Estado: '.strtoupper((string) $enrollment->student_status), 8, 'F1', '0.30 0.30 0.30 rg');
+        $commands[] = $this->pdfTextAt($x + 540, $top - 60, 'Registro: '.$enrollment->created_at->format('d/m/Y H:i'), 8, 'F1', '0.30 0.30 0.30 rg');
 
         $leftX = $x + 16;
         $rightX = $x + 386;
@@ -951,8 +980,8 @@ class EnrollmentController extends Controller
         $commands[] = $this->pdfFieldBlock('Periodo', $this->truncateText((string) $enrollment->period, 24), $leftX, $fieldTop - 26);
         $commands[] = $this->pdfFieldBlock('Sede', $this->truncateText((string) ($enrollment->campus ?: $this->extractCampusFromLegacy((string) $enrollment->campus_schedule)), 24), $leftX, $fieldTop - 52);
 
-        $contactValue = trim(($enrollment->email ?: '-') . ' / ' . ($enrollment->mobile ?: '-') . (($enrollment->phone ?: '') !== '' ? ' / ' . $enrollment->phone : ''));
-        $residenceValue = trim((optional($enrollment->residenceDepartment)->name ?: '-') . ' - ' . (optional($enrollment->residenceMunicipality)->name ?: $enrollment->residence_city ?: '-'));
+        $contactValue = trim(($enrollment->email ?: '-').' / '.($enrollment->mobile ?: '-').(($enrollment->phone ?: '') !== '' ? ' / '.$enrollment->phone : ''));
+        $residenceValue = trim((optional($enrollment->residenceDepartment)->name ?: '-').' - '.(optional($enrollment->residenceMunicipality)->name ?: $enrollment->residence_city ?: '-'));
         $addressValue = $this->truncateText((string) ($enrollment->address ?: '-'), 34);
         $commands[] = $this->pdfFieldBlock('Contacto', $this->truncateText($contactValue, 48), $rightX, $fieldTop);
         $commands[] = $this->pdfFieldBlock('Residencia', $this->truncateText($residenceValue, 40), $rightX, $fieldTop - 26);
@@ -963,7 +992,7 @@ class EnrollmentController extends Controller
         $commands[] = $this->pdfMiniFinancialBox($x + 12, $boxY, $boxW, 26, 'Inscripción', $this->pdfMoney($enrollment->inscription_amount_paid), $this->pdfMoney($enrollment->inscription_refund_amount), number_format($enrollment->inscriptionNetAmount(), 2, ',', '.'), '1 1 1 rg', '0.88 0.88 0.88 rg');
         $commands[] = $this->pdfMiniFinancialBox($x + 24 + $boxW, $boxY, $boxW, 26, 'Matrícula', $this->pdfMoney($enrollment->tuition_amount_paid), $this->pdfMoney($enrollment->tuition_refund_amount), number_format($enrollment->tuitionNetAmount(), 2, ',', '.'), '1 1 1 rg', '0.88 0.88 0.88 rg');
 
-        $auditText = 'Última edición: ' . (($enrollment->personal_data_updated_at ? $enrollment->personal_data_updated_at->format('d/m/Y H:i') : 'Sin registro') . ' · ' . (optional($enrollment->personalDataUpdatedBy)->name ?: 'Sin registro'));
+        $auditText = 'Última edición: '.(($enrollment->personal_data_updated_at ? $enrollment->personal_data_updated_at->format('d/m/Y H:i') : 'Sin registro').' · '.(optional($enrollment->personalDataUpdatedBy)->name ?: 'Sin registro'));
         $commands[] = $this->pdfTextAt($x + 16, $bottom + 10, $this->truncateText($auditText, 96), 8, 'F1', '0.52 0.52 0.52 rg');
 
         return implode("\n", $commands);
@@ -983,7 +1012,7 @@ class EnrollmentController extends Controller
         $commands = [];
         $commands[] = $this->pdfRect($x, $y, $width, $height, '1 1 1 rg', '0.92 0.92 0.92 RG', 0.35);
         $commands[] = $this->pdfTextAt($x + 10, $y + 18, $title, 9, 'F2', '0.22 0.22 0.22 rg');
-        $commands[] = $this->pdfTextAt($x + 10, $y + 9, 'Pagado: ' . $paid . '  |  Devolución: ' . $refund . '  |  Saldo: ' . $balance, 7, 'F1', '0.24 0.24 0.24 rg');
+        $commands[] = $this->pdfTextAt($x + 10, $y + 9, 'Pagado: '.$paid.'  |  Devolución: '.$refund.'  |  Saldo: '.$balance, 7, 'F1', '0.24 0.24 0.24 rg');
 
         return implode("\n", $commands);
     }
@@ -1020,8 +1049,8 @@ class EnrollmentController extends Controller
         $commands[] = 'q';
         $commands[] = $fillColor;
         $commands[] = $strokeColor;
-        $commands[] = $lineWidth . ' w';
-        $commands[] = $x . ' ' . $y . ' ' . $width . ' ' . $height . ' re B';
+        $commands[] = $lineWidth.' w';
+        $commands[] = $x.' '.$y.' '.$width.' '.$height.' re B';
         $commands[] = 'Q';
 
         return implode("\n", $commands);
@@ -1029,7 +1058,7 @@ class EnrollmentController extends Controller
 
     protected function pdfTextAt(float $x, float $y, string $text, int $fontSize = 10, string $font = 'F1', string $color = '0 0 0 rg'): string
     {
-        return 'BT' . "\n" . $color . "\n/" . $font . ' ' . $fontSize . ' Tf' . "\n1 0 0 1 " . $x . ' ' . $y . ' Tm' . "\n(" . $this->pdfEscapeText($text) . ") Tj" . "\nET";
+        return 'BT'."\n".$color."\n/".$font.' '.$fontSize.' Tf'."\n1 0 0 1 ".$x.' '.$y.' Tm'."\n(".$this->pdfEscapeText($text).') Tj'."\nET";
     }
 
     protected function pdfEscapeText(string $text): string
@@ -1047,7 +1076,7 @@ class EnrollmentController extends Controller
 
         foreach (['search', 'period', 'program', 'campus', 'jornada', 'status', 'from_date', 'to_date'] as $filter) {
             if ($request->filled($filter)) {
-                $parts[] = ucfirst(str_replace('_', ' ', $filter)) . ': ' . $request->string($filter)->toString();
+                $parts[] = ucfirst(str_replace('_', ' ', $filter)).': '.$request->string($filter)->toString();
             }
         }
 

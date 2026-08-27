@@ -1,4 +1,7 @@
 {
+    "agents": [
+        "copilot"
+    ],
     "cloud": false,
     "guidelines": true,
     "mcp": true,
@@ -7,6 +10,7 @@
     "skills": [
         "infer-conventions",
         "laravel-best-practices",
+        "testing-best-practices",
         "pest-testing",
         "tailwindcss-development"
     ]

@@ -7,6 +7,7 @@
     <title>@yield('title', 'Sistema')</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+    @stack('styles')
     <style>
         :root {
             --bg: #f4f7fb;
@@ -31,11 +32,13 @@
             background: linear-gradient(135deg, #eef4ff 0%, var(--bg) 100%);
             color: var(--text);
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .shell {
             display: flex;
             min-height: 100vh;
+            width: 100%;
         }
 
         .sidebar-backdrop {
@@ -43,6 +46,7 @@
         }
 
         .sidebar {
+            flex: 0 0 260px;
             width: 260px;
             background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
             color: white;
@@ -109,6 +113,15 @@
             background: rgba(255, 255, 255, 0.12);
         }
 
+        .sidebar-link__icon {
+            display: inline-block;
+            min-width: 1.35rem;
+            margin-right: 0.35rem;
+            font-size: 1rem;
+            line-height: 1;
+            text-align: center;
+        }
+
         .sidebar-section {
             border-top: 1px solid rgba(255, 255, 255, 0.12);
             padding-top: 0.7rem;
@@ -144,6 +157,7 @@
 
         .main {
             flex: 1;
+            min-width: 0;
             padding: 1.5rem 1.25rem 2.5rem;
         }
 
@@ -153,6 +167,8 @@
             border-radius: 20px;
             box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
             padding: 1.5rem;
+            min-width: 0;
+            max-width: 100%;
         }
 
         .stats-grid {
@@ -349,6 +365,7 @@
 
         .table-wrap {
             width: 100%;
+            max-width: 100%;
             overflow-x: auto;
         }
 
@@ -640,8 +657,14 @@
             }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
+            .shell {
+                display: block;
+                position: relative;
+            }
+
             .main {
+                width: 100%;
                 padding: 1rem 0.75rem 1.5rem;
             }
 
@@ -702,15 +725,12 @@
                 display: none;
             }
 
-            .shell {
-                position: relative;
-            }
-
             .sidebar {
                 position: fixed;
                 top: 0;
                 left: 0;
                 bottom: 0;
+                flex: 0 0 min(84vw, 300px);
                 width: min(84vw, 300px);
                 transform: translateX(0);
                 transition: transform 0.24s ease;
@@ -771,44 +791,56 @@
                 <span>Sistema de gestión</span>
             </div>
 
-            <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                href="{{ route('dashboard') }}">Dashboard</a>
+            <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span
+                    class="sidebar-link__icon" aria-hidden="true">📊</span>Dashboard</a>
             @if (Auth::check())
-                <a class="{{ request()->routeIs('enrollments.index') ? 'active' : '' }}"
-                    href="{{ route('enrollments.index') }}">Inscripciones</a>
-                <a class="{{ request()->routeIs('enrollments.financial') ? 'active' : '' }}"
-                    href="{{ route('enrollments.financial') }}">Reporte financiero</a>
-                <div class="sidebar-section">
-                    <div class="sidebar-section__title">Reportes por estado</div>
-                    <a class="{{ request('status') === null ? 'active' : '' }}"
-                        href="{{ route('enrollments.index') }}">
-                        <span>•</span>Todos
-                    </a>
-                    <a class="{{ request('status') === 'pendiente' ? 'active' : '' }}"
-                        href="{{ route('enrollments.index', ['status' => 'pendiente']) }}">
-                        <span>⏳</span>Pendientes
-                    </a>
-                    <a class="{{ request('status') === 'inscrito' ? 'active' : '' }}"
-                        href="{{ route('enrollments.index', ['status' => 'inscrito']) }}">
-                        <span>✓</span>Inscritos
-                    </a>
-                    <a class="{{ request('status') === 'matriculado' ? 'active' : '' }}"
-                        href="{{ route('enrollments.index', ['status' => 'matriculado']) }}">
-                        <span>🎓</span>Matriculados
-                    </a>
-                    <a class="{{ request('status') === 'retirado' ? 'active' : '' }}"
-                        href="{{ route('enrollments.index', ['status' => 'retirado']) }}">
-                        <span>↺</span>Retirados
-                    </a>
-                </div>
-            @endif
-            @if (Auth::check() && Auth::user()->isAdmin())
-                <a class="{{ request()->routeIs('users.*') ? 'active' : '' }}"
-                    href="{{ route('users.index') }}">Usuarios</a>
-                <a class="{{ request()->routeIs('admin.period-options.*') || request()->routeIs('admin.campus-schedule-options.*') || request()->routeIs('admin.jornada-options.*') || request()->routeIs('admin.program-options.*') ? 'active' : '' }}"
-                    href="{{ route('admin.period-options.index') }}">Catálogos</a>
-                <a class="{{ request()->routeIs('admin') ? 'active' : '' }}"
-                    href="{{ route('admin') }}">Administración</a>
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request()->routeIs('prospects.index'),
+                    'icon' => '👥',
+                    'label' => 'Prospectos',
+                    'route' => 'prospects.index',
+                ])
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request()->routeIs('marketing.index'),
+                    'icon' => '☎',
+                    'label' => 'Mercadeo',
+                    'route' => 'marketing.index',
+                ])
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request('module') === 'pagos',
+                    'icon' => '💵',
+                    'label' => 'Pagos',
+                    'route' => 'enrollments.financial',
+                    'routeParams' => ['module' => 'pagos'],
+                ])
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request('module') === 'creditos',
+                    'icon' => '🏢',
+                    'label' => 'Créditos académicos',
+                    'route' => 'enrollments.financial',
+                    'routeParams' => ['module' => 'creditos'],
+                ])
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request('module') === 'retirados',
+                    'icon' => '⛔',
+                    'label' => 'Retirados',
+                    'route' => 'enrollments.index',
+                    'routeParams' => ['module' => 'retirados', 'status' => 'retirado'],
+                ])
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request('module') === 'devoluciones',
+                    'icon' => '↩',
+                    'label' => 'Devoluciones',
+                    'route' => 'enrollments.financial',
+                    'routeParams' => ['module' => 'devoluciones'],
+                ])
+                @include('layouts.partials.sidebar-link', [
+                    'active' => request('module') === 'reportes',
+                    'icon' => '📈',
+                    'label' => 'Reportes',
+                    'route' => 'enrollments.index',
+                    'routeParams' => ['module' => 'reportes'],
+                ])
             @endif
             <form method="POST" action="{{ route('logout') }}" style="margin-top:auto;">
                 @csrf
@@ -846,7 +878,7 @@
 
             var storageKey = 'inscripcionesu.sidebarCollapsed';
             var collapsed = localStorage.getItem(storageKey) === '1';
-            var mobileQuery = window.matchMedia('(max-width: 768px)');
+            var mobileQuery = window.matchMedia('(max-width: 900px)');
 
             if (localStorage.getItem(storageKey) === null && mobileQuery.matches) {
                 collapsed = true;

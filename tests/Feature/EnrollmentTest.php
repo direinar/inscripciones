@@ -120,6 +120,88 @@ class EnrollmentTest extends TestCase
             ->assertSee('Laura');
     }
 
+    public function test_marketing_user_can_view_prospects_module(): void
+    {
+        /** @var User $mercadeo */
+        $mercadeo = User::factory()->create(['role' => 'mercadeo']);
+        Enrollment::create($this->enrollmentPayload());
+
+        $this->get('/prospectos')->assertRedirect('/login');
+
+        $this->actingAs($mercadeo)
+            ->get('/prospectos')
+            ->assertOk()
+            ->assertSee('Prospectos')
+            ->assertSee('Prospectos y estudiantes')
+            ->assertSee('Laura')
+            ->assertSee('Asesor');
+    }
+
+    public function test_prospects_module_uses_the_shared_sidebar_link(): void
+    {
+        /** @var User $mercadeo */
+        $mercadeo = User::factory()->create(['role' => 'mercadeo']);
+        Enrollment::create([
+            'period' => '2026-1',
+            'campus_schedule' => 'Vegachí - Fin de semana',
+            'campus' => 'Vegachí',
+            'jornada' => 'Fin de semana',
+            'program' => 'TL Agente de Tránsito',
+            'first_name' => 'Laura',
+            'last_name' => 'Reina',
+            'document_type' => 'Cédula de Ciudadanía',
+            'document_number' => '123456789',
+            'sex' => 'Femenino',
+            'email' => 'laura@example.com',
+            'phone' => '',
+            'mobile' => '3001234567',
+            'birth_date' => '2000-05-10',
+            'address' => 'Calle 10 # 20-30',
+            'residence_city' => 'Medellín',
+        ]);
+
+        $this->actingAs($mercadeo)
+            ->get('/prospectos')
+            ->assertOk()
+            ->assertSee('class="active"', false)
+            ->assertSee('href="'.route('prospects.index').'"', false);
+    }
+
+    public function test_marketing_module_uses_the_follow_up_view(): void
+    {
+        /** @var User $mercadeo */
+        $mercadeo = User::factory()->create(['role' => 'mercadeo']);
+        Enrollment::create([
+            'period' => '2026-1',
+            'campus_schedule' => 'Vegachí - Fin de semana',
+            'campus' => 'Vegachí',
+            'jornada' => 'Fin de semana',
+            'program' => 'TL Agente de Tránsito',
+            'first_name' => 'Laura',
+            'last_name' => 'Reina',
+            'document_type' => 'Cédula de Ciudadanía',
+            'document_number' => '123456789',
+            'sex' => 'Femenino',
+            'email' => 'laura@example.com',
+            'phone' => '',
+            'mobile' => '3001234567',
+            'birth_date' => '2000-05-10',
+            'address' => 'Calle 10 # 20-30',
+            'residence_city' => 'Medellín',
+        ]);
+
+        $this->actingAs($mercadeo)
+            ->get('/mercadeo')
+            ->assertOk()
+            ->assertSee('Mercadeo')
+            ->assertSee('Seguimiento de mercadeo')
+            ->assertSee('Registrar seguimiento')
+            ->assertSee('Inscribir')
+            ->assertSee('class="active"', false)
+            ->assertSee('href="'.route('marketing.index').'"', false)
+            ->assertDontSee('Reporte de inscripciones');
+    }
+
     public function test_admin_can_export_enrollment_reports_as_excel(): void
     {
         /** @var User $admin */
@@ -140,7 +222,7 @@ class EnrollmentTest extends TestCase
         $enrollment = Enrollment::create($this->enrollmentPayload());
 
         $this->actingAs($mercadeo)
-            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+            ->patch('/reportes/inscripciones/'.$enrollment->id.'/pagos', [
                 'movement_type' => 'payment',
                 'concept' => 'inscription',
                 'movement_date' => '2026-08-18',
@@ -156,6 +238,47 @@ class EnrollmentTest extends TestCase
             ->assertSee('Pago');
     }
 
+    public function test_marketing_user_can_view_payments_module_with_only_payment_movements(): void
+    {
+        /** @var User $mercadeo */
+        $mercadeo = User::factory()->create(['role' => 'mercadeo']);
+        $enrollment = Enrollment::create([
+            'period' => '2026-1',
+            'campus_schedule' => 'Vegachí - Fin de semana',
+            'campus' => 'Vegachí',
+            'jornada' => 'Fin de semana',
+            'program' => 'TL Agente de Tránsito',
+            'first_name' => 'Laura',
+            'last_name' => 'Reina',
+            'document_type' => 'Cédula de Ciudadanía',
+            'document_number' => '123456789',
+            'sex' => 'Femenino',
+            'email' => 'laura@example.com',
+            'phone' => '',
+            'mobile' => '3001234567',
+            'birth_date' => '2000-05-10',
+            'address' => 'Calle 10 # 20-30',
+            'residence_city' => 'Medellín',
+            'inscription_payment_date' => '2026-08-18',
+            'inscription_amount_paid' => 60000,
+            'inscription_refund_date' => '2026-08-20',
+            'inscription_refund_amount' => 10000,
+        ]);
+
+        $response = $this->actingAs($mercadeo)
+            ->get('/reportes/financieros?module=pagos');
+
+        $response->assertOk()
+            ->assertSee('Pagos')
+            ->assertSee('Medio')
+            ->assertSee('Recibo')
+            ->assertSee($enrollment->document_number)
+            ->assertSee('No registrado')
+            ->assertSee('Registrar pago')
+            ->assertDontSee('Filtrar')
+            ->assertDontSee('Devolución');
+    }
+
     public function test_marketing_user_can_update_payment_status_and_activate_student(): void
     {
         /** @var User $mercadeo */
@@ -163,7 +286,7 @@ class EnrollmentTest extends TestCase
         $enrollment = Enrollment::create($this->enrollmentPayload());
 
         $this->actingAs($mercadeo)
-            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+            ->patch('/reportes/inscripciones/'.$enrollment->id.'/pagos', [
                 'movement_type' => 'payment',
                 'concept' => 'inscription',
                 'movement_date' => '2026-08-18',
@@ -179,7 +302,7 @@ class EnrollmentTest extends TestCase
         ]);
 
         $this->actingAs($mercadeo)
-            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+            ->patch('/reportes/inscripciones/'.$enrollment->id.'/pagos', [
                 'movement_type' => 'payment',
                 'concept' => 'tuition',
                 'movement_date' => '2026-08-19',
@@ -195,7 +318,7 @@ class EnrollmentTest extends TestCase
         ]);
 
         $this->actingAs($mercadeo)
-            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+            ->patch('/reportes/inscripciones/'.$enrollment->id.'/pagos', [
                 'movement_type' => 'refund',
                 'concept' => 'tuition',
                 'movement_date' => '2026-08-20',
@@ -211,7 +334,7 @@ class EnrollmentTest extends TestCase
         ]);
 
         $this->actingAs($mercadeo)
-            ->patch('/reportes/inscripciones/' . $enrollment->id . '/pagos', [
+            ->patch('/reportes/inscripciones/'.$enrollment->id.'/pagos', [
                 'movement_type' => 'refund',
                 'concept' => 'inscription',
                 'movement_date' => '2026-08-20',

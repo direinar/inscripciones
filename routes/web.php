@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\CampusScheduleOptionController;
 use App\Http\Controllers\Admin\JornadaOptionController;
 use App\Http\Controllers\Admin\PeriodOptionController;
 use App\Http\Controllers\Admin\ProgramOptionController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\RoleMiddleware;
@@ -23,9 +23,11 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
-    Route::get('/admin', [AuthController::class, 'admin'])->middleware(RoleMiddleware::class . ':admin')->name('admin');
+    Route::get('/admin', [AuthController::class, 'admin'])->middleware(RoleMiddleware::class.':admin')->name('admin');
 
-    Route::middleware(RoleMiddleware::class . ':admin,mercadeo')->group(function () {
+    Route::middleware(RoleMiddleware::class.':admin,mercadeo')->group(function () {
+        Route::get('/prospectos', [EnrollmentController::class, 'prospects'])->name('prospects.index');
+        Route::get('/mercadeo', [EnrollmentController::class, 'marketing'])->name('marketing.index');
         Route::get('/reportes/inscripciones', [EnrollmentController::class, 'index'])->name('enrollments.index');
         Route::get('/reportes/inscripciones/exportar', [EnrollmentController::class, 'export'])->name('enrollments.export');
         Route::get('/reportes/financieros', [EnrollmentController::class, 'financialReport'])->name('enrollments.financial');
@@ -37,7 +39,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/reportes/inscripciones/{enrollment}/datos-personales', [EnrollmentController::class, 'updatePersonalData'])->name('enrollments.personal-data.update');
     });
 
-    Route::middleware(RoleMiddleware::class . ':admin')->group(function () {
+    Route::middleware(RoleMiddleware::class.':admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
